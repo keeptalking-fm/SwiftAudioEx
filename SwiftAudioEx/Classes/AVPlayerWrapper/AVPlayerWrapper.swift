@@ -100,9 +100,15 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
         avPlayer.reasonForWaitingToPlay
     }
 
+    /// Desired rate to play at (non-0 if buffering)
     var rate: Float {
         get { avPlayer.rate }
         set { avPlayer.rate = newValue }
+    }
+    
+    /// The actual rate the player plays at
+    var realRate: Float {
+        avPlayer.currentItem?.timebase.map({ Float($0.rate) }) ?? 0
     }
 
     weak var delegate: AVPlayerWrapperDelegate? = nil
@@ -322,6 +328,10 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
             break
         }
     }
+    
+    func player(didChangeRate rate: Float) {
+        // don't react to player.rate changing - the corresponding changes are done in observation for timeControlStatus. 
+    }
 }
 
 extension AVPlayerWrapper: AVPlayerTimeObserverDelegate {
@@ -359,5 +369,8 @@ extension AVPlayerWrapper: AVPlayerItemObserverDelegate {
     func item(didReceiveMetadata metadata: [AVTimedMetadataGroup]) {
         delegate?.AVWrapper(didReceiveMetadata: metadata)
     }
-    
+     
+    func item(didUpdateEffectiveRate effectiveRate: Double, rate: Double) {
+        delegate?.AVWrapper(didChangeEffectiveRate: effectiveRate, rate: rate)
+    }
 }

@@ -28,6 +28,8 @@ protocol AVPlayerWrapperProtocol: AnyObject {
     
     var rate: Float { get set }
     
+    var realRate: Float { get }
+
     var delegate: AVPlayerWrapperDelegate? { get set }
     
     var bufferDuration: TimeInterval { get set }

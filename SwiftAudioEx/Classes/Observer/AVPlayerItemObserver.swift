@@ -20,6 +20,10 @@ protocol AVPlayerItemObserverDelegate: AnyObject {
      */
     func item(didReceiveMetadata metadata: [AVTimedMetadataGroup])
     
+    /**
+     Called when the observed item updates the rate.
+     */
+    func item(didUpdateEffectiveRate effectiveRate: Double, rate: Double)
 }
 
 /**
@@ -30,6 +34,7 @@ class AVPlayerItemObserver: NSObject {
     private static var context = 0
     private let main: DispatchQueue = .main
     private let metadataOutput: AVPlayerItemMetadataOutput
+    private var effectiveRateObserver: AnyObject?
     
     private struct AVPlayerItemKeyPath {
         static let duration = #keyPath(AVPlayerItem.duration)
@@ -64,6 +69,14 @@ class AVPlayerItemObserver: NSObject {
         item.addObserver(self, forKeyPath: AVPlayerItemKeyPath.duration, options: [.new], context: &AVPlayerItemObserver.context)
         item.addObserver(self, forKeyPath: AVPlayerItemKeyPath.loadedTimeRanges, options: [.new], context: &AVPlayerItemObserver.context)
         item.add(metadataOutput)
+        
+        effectiveRateObserver =
+        NotificationCenter.default.addObserver(forName: Notification.Name(kCMTimebaseNotification_EffectiveRateChanged as String), object: item.timebase, queue: .main) { [weak self] note in
+            guard let timebase = self?.observingItem?.timebase else {
+                return
+            }
+            self?.delegate?.item(didUpdateEffectiveRate: timebase.effectiveRate, rate: timebase.rate)
+        }
     }
     
     func stopObservingCurrentItem() {
@@ -73,6 +86,7 @@ class AVPlayerItemObserver: NSObject {
         observingItem.removeObserver(self, forKeyPath: AVPlayerItemKeyPath.duration, context: &AVPlayerItemObserver.context)
         observingItem.removeObserver(self, forKeyPath: AVPlayerItemKeyPath.loadedTimeRanges, context: &AVPlayerItemObserver.context)
         observingItem.remove(metadataOutput)
+        effectiveRateObserver.map ( NotificationCenter.default.removeObserver )
         isObserving = false
         self.observingItem = nil
     }

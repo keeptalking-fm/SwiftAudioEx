@@ -16,6 +16,7 @@ extension AudioPlayer {
     public typealias FailEventData = Error?
     public typealias SeekEventData = (seconds: Int, didFinish: Bool)
     public typealias UpdateDurationEventData = Double
+    public typealias UpdateRateEventData = (effectiveRate: Double, rate: Double)
     public typealias MetadataEventData = [AVTimedMetadataGroup]
     public typealias DidRecreateAVPlayerEventData = ()
     public typealias QueueIndexEventData = (previousIndex: Int?, newIndex: Int?)
@@ -59,6 +60,11 @@ extension AudioPlayer {
          */
         public let updateDuration: AudioPlayer.Event<UpdateDurationEventData> = AudioPlayer.Event()
 
+        /**
+         Emitted when the player updates its real rate.
+         */
+        public let updateRealRate: AudioPlayer.Event<UpdateRateEventData> = AudioPlayer.Event()
+        
         /**
          Emitted when the player receives metadata.
          - Important: Remember to dispatch to the main queue if any UI is updated in the event handler.

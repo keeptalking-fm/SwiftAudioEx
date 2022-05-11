@@ -20,6 +20,11 @@ protocol AVPlayerObserverDelegate: AnyObject {
      Called when the AVPlayer.timeControlStatus changes.
      */
     func player(didChangeTimeControlStatus status: AVPlayer.TimeControlStatus)
+    
+    /**
+     Called when the AVPlayer.rate changes.
+     */
+    func player(didChangeRate rate: Float)
 }
 
 /**
@@ -33,6 +38,7 @@ class AVPlayerObserver: NSObject {
     private struct AVPlayerKeyPath {
         static let status = #keyPath(AVPlayer.status)
         static let timeControlStatus = #keyPath(AVPlayer.timeControlStatus)
+        static let rate = #keyPath(AVPlayer.rate)
     }
 
     private let statusChangeOptions: NSKeyValueObservingOptions = [.new, .initial]
@@ -61,6 +67,7 @@ class AVPlayerObserver: NSObject {
         isObserving = true
         player.addObserver(self, forKeyPath: AVPlayerKeyPath.status, options: statusChangeOptions, context: &AVPlayerObserver.context)
         player.addObserver(self, forKeyPath: AVPlayerKeyPath.timeControlStatus, options: timeControlStatusChangeOptions, context: &AVPlayerObserver.context)
+        player.addObserver(self, forKeyPath: AVPlayerKeyPath.rate, options: [.new], context: &AVPlayerObserver.context)
     }
 
     func stopObserving() {
@@ -85,6 +92,8 @@ class AVPlayerObserver: NSObject {
         case AVPlayerKeyPath.timeControlStatus:
             handleTimeControlStatusChange(change)
 
+        case AVPlayerKeyPath.rate:
+            handleRateChange(change)
         default:
             break
         }
@@ -106,5 +115,12 @@ class AVPlayerObserver: NSObject {
             status = AVPlayer.TimeControlStatus(rawValue: statusNumber.intValue)!
             delegate?.player(didChangeTimeControlStatus: status)
         }
+    }
+    
+    private func handleRateChange(_ change: [NSKeyValueChangeKey: Any]?) {
+        guard let player = player else {
+            return
+        }
+        delegate?.player(didChangeRate: player.rate)
     }
 }

@@ -131,6 +131,11 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
         }
     }
     
+    /// The real rate the player is at (0.0 when buffering)
+    public var realRate: Float {
+        wrapper.realRate
+    }
+    
     // MARK: - Init
     
     /**
@@ -341,6 +346,10 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
         default: break
         }
         event.stateChange.emit(data: state)
+    }
+    
+    func AVWrapper(didChangeEffectiveRate effectiveRate: Double, rate: Double) {
+        event.updateRealRate.emit(data: (effectiveRate, rate))
     }
     
     func AVWrapper(secondsElapsed seconds: Double) {
