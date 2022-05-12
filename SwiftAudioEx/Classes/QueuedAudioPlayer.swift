@@ -74,8 +74,8 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
      - parameter item: The AudioItem to replace the current item.
      - throws: APError.LoadError
      */
-    public override func load(item: AudioItem, playWhenReady: Bool) throws {
-        try super.load(item: item, playWhenReady: playWhenReady)
+    public override func load(item: AudioItem, forceRecreateAVPlayer: Bool, playWhenReady: Bool) throws {
+        try super.load(item: item, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady)
         queueManager.replaceCurrentItem(with: item)
     }
     
@@ -89,7 +89,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
     public func add(item: AudioItem, playWhenReady: Bool = true) throws {
         if currentItem == nil {
             queueManager.addItem(item)
-            try load(item: item, playWhenReady: playWhenReady)
+            try load(item: item, forceRecreateAVPlayer: false, playWhenReady: playWhenReady)
         }
         else {
             queueManager.addItem(item)
@@ -103,10 +103,10 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
      - parameter playWhenReady: If the AudioPlayer has no item loaded, it will load the first item in the list. If this is `true` it will automatically start playback. Default is `true`.
      - throws: `APError`
      */
-    public func add(items: [AudioItem], playWhenReady: Bool = true) throws {
+    public func add(items: [AudioItem], forceRecreateAVPlayer: Bool = false, playWhenReady: Bool = true) throws {
         if currentItem == nil {
             queueManager.addItems(items)
-            try load(item: currentItem!, playWhenReady: playWhenReady)
+            try load(item: currentItem!, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady)
         }
         else {
             queueManager.addItems(items)
@@ -128,7 +128,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
         do {
             let nextItem = try queueManager.next()
             event.playbackEnd.emit(data: .skippedToNext)
-            try load(item: nextItem, playWhenReady: shouldPlayWhenReady)
+            try load(item: nextItem, forceRecreateAVPlayer: false, playWhenReady: shouldPlayWhenReady)
         } catch APError.QueueError.noNextItem  {
             if repeatMode == .queue {
                 event.playbackEnd.emit(data: .skippedToNext)
@@ -149,7 +149,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
 
         let previousItem = try queueManager.previous()
         event.playbackEnd.emit(data: .skippedToPrevious)
-        try load(item: previousItem, playWhenReady: shouldPlayWhenReady)
+        try load(item: previousItem, forceRecreateAVPlayer: false, playWhenReady: shouldPlayWhenReady)
     }
     
     /**
@@ -177,7 +177,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
         } else {
             let item = try queueManager.jump(to: index)
             event.playbackEnd.emit(data: .jumpedToIndex)
-            try load(item: item, playWhenReady: playWhenReady)
+            try load(item: item, forceRecreateAVPlayer: false, playWhenReady: playWhenReady)
         }
     }
     
@@ -215,7 +215,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
         case .off:
             do {
                 let nextItem = try queueManager.next()
-                try load(item: nextItem, playWhenReady: true)
+                try load(item: nextItem, forceRecreateAVPlayer: false, playWhenReady: true)
             } catch {
                 event.queueIndex.emit(data: (currentIndex, nil))
             }
@@ -224,7 +224,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
         case .queue:
             do {
                 let nextItem = try queueManager.next()
-                try load(item: nextItem, playWhenReady: true)
+                try load(item: nextItem, forceRecreateAVPlayer: false, playWhenReady: true)
             } catch {
                 try? jumpToItem(atIndex: 0, playWhenReady: true)
             }

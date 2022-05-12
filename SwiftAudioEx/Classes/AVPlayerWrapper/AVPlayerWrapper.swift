@@ -181,11 +181,11 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
     
     
     
-    func load(from url: URL, playWhenReady: Bool, options: [String: Any]? = nil) {
+    func load(from url: URL, forceRecreateAVPlayer: Bool, playWhenReady: Bool, options: [String: Any]? = nil) {
         reset(soft: true)
         self.playWhenReady = playWhenReady
 
-        if currentItem?.status == .failed {
+        if currentItem?.status == .failed || forceRecreateAVPlayer {
             recreateAVPlayer()
         }
 
@@ -247,13 +247,13 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
         }
     }
     
-    func load(from url: URL, playWhenReady: Bool, initialTime: TimeInterval? = nil, options: [String : Any]? = nil) {
+    func load(from url: URL, forceRecreateAVPlayer: Bool, playWhenReady: Bool, initialTime: TimeInterval? = nil, options: [String : Any]? = nil) {
         self.initialTime = initialTime
 
         pausedForLoad = true
         pause()
 
-        self.load(from: url, playWhenReady: playWhenReady, options: options)
+        self.load(from: url, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady, options: options)
     }
     
     // MARK: - Util
