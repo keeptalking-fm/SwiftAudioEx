@@ -123,8 +123,7 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
      - throws: `APError`
      */
     public func next() throws {
-        let shouldPlayWhenReady = (playerState == .loading) ? willPlayWhenReady : [.buffering, .playing].contains(playerState)
-
+        let shouldPlayWhenReady = [.loading, .ready].contains(playerState) ? willPlayWhenReady : [.buffering, .playing].contains(playerState)
         do {
             let nextItem = try queueManager.next()
             event.playbackEnd.emit(data: .skippedToNext)
