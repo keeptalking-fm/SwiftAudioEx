@@ -360,12 +360,8 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
 
 
 extension PlaybackItem: AudioItem {
-    public func getSourceUrl() -> String {
-        audioURL.absoluteString
-    }
-    
-    public func getSourceType() -> SourceType {
-        .stream
+    public var sourceURL: URL {
+        audioURL
     }
 }
 
