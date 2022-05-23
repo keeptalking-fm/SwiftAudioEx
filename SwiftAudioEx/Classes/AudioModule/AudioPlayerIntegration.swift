@@ -38,8 +38,8 @@ public protocol AudioPlayerIntegration: AnyObject {
     func play()
     func pause()
     func togglePlayPause()
-    func moveToPreviousTrack()
-    func moveToNextTrack()
+    func moveToPreviousTrack() throws
+    func moveToNextTrack() throws
     func jumpToItemWithID(_ uuid: UUID)
 }
 

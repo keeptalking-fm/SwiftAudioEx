@@ -16,7 +16,7 @@ public class RemoteCommandController {
         
     private let center: MPRemoteCommandCenter
     
-    weak var audioPlayer: AudioPlayer?
+    weak var audio: AudioPlayerIntegration?
     
     var commandTargetPointers: [String: Any] = [:]
     private var enabledCommands: [RemoteCommand] = []
@@ -109,70 +109,70 @@ public class RemoteCommandController {
     public lazy var handleBookmarkCommand: RemoteCommandHandler = handleBookmarkCommandDefault
     
     private func handlePlayCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let audioPlayer = audioPlayer {
-            audioPlayer.play()
+        if let audio = audio {
+            audio.play()
             return MPRemoteCommandHandlerStatus.success
         }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handlePauseCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let audioPlayer = audioPlayer {
-            audioPlayer.pause()
+        if let audio = audio {
+            audio.pause()
             return MPRemoteCommandHandlerStatus.success
         }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleStopCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let audioPlayer = audioPlayer {
-            audioPlayer.stop()
+        if let audio = audio {
+            audio.finishPlaying()
             return .success
         }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleTogglePlayPauseCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let audioPlayer = audioPlayer {
-            audioPlayer.togglePlaying()
+        if let audio = audio {
+            audio.togglePlayPause()
             return MPRemoteCommandHandlerStatus.success
         }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleSkipForwardCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let command = event.command as? MPSkipIntervalCommand,
-            let interval = command.preferredIntervals.first,
-            let audioPlayer = audioPlayer {
-            audioPlayer.seek(to: audioPlayer.currentTime + Double(truncating: interval))
-            return MPRemoteCommandHandlerStatus.success
-        }
+//        if let command = event.command as? MPSkipIntervalCommand,
+//            let interval = command.preferredIntervals.first,
+//            let audioPlayer = audioPlayer {
+//            audioPlayer.seek(to: audioPlayer.currentTime + Double(truncating: interval))
+//            return MPRemoteCommandHandlerStatus.success
+//        }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleSkipBackwardDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let command = event.command as? MPSkipIntervalCommand,
-            let interval = command.preferredIntervals.first,
-            let audioPlayer = audioPlayer {
-            audioPlayer.seek(to: audioPlayer.currentTime - Double(truncating: interval))
-            return MPRemoteCommandHandlerStatus.success
-        }
+//        if let command = event.command as? MPSkipIntervalCommand,
+//            let interval = command.preferredIntervals.first,
+//            let audioPlayer = audioPlayer {
+//            audioPlayer.seek(to: audioPlayer.currentTime - Double(truncating: interval))
+//            return MPRemoteCommandHandlerStatus.success
+//        }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleChangePlaybackPositionCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let event = event as? MPChangePlaybackPositionCommandEvent,
-            let audioPlayer = audioPlayer {
-            audioPlayer.seek(to: event.positionTime)
-            return MPRemoteCommandHandlerStatus.success
-        }
+//        if let event = event as? MPChangePlaybackPositionCommandEvent,
+//            let audioPlayer = audioPlayer {
+//            audioPlayer.seek(to: event.positionTime)
+//            return MPRemoteCommandHandlerStatus.success
+//        }
         return MPRemoteCommandHandlerStatus.commandFailed
     }
     
     private func handleNextTrackCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let player = audioPlayer as? QueuedAudioPlayer {
+        if let audio = audio {
             do {
-                try player.next()
+                try audio.moveToNextTrack()
                 return MPRemoteCommandHandlerStatus.success
             }
             catch let error {
@@ -183,9 +183,9 @@ public class RemoteCommandController {
     }
     
     private func handlePreviousTrackCommandDefault(event: MPRemoteCommandEvent) -> MPRemoteCommandHandlerStatus {
-        if let player = audioPlayer as? QueuedAudioPlayer {
+        if let audio = audio {
             do {
-                try player.previous()
+                try audio.moveToPreviousTrack()
                 return MPRemoteCommandHandlerStatus.success
             }
             catch let error {

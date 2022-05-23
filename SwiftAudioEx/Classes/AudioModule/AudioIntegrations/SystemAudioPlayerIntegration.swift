@@ -13,7 +13,6 @@ import AVFoundation
 // - handle loading of artwork
 // - support starting from a specific comment, also after media services reset
 // - test player failing
-// - handle errors on next() and previous()
 
 // Known issues:
 // - QueuedAudioPlayer manually manages the queue, not with AVQueuePlayer. There's no pre-loading and there's a 0,5s gap between files even on good network.
@@ -25,10 +24,12 @@ public final class SystemAudioPlayerIntegration {
     private(set) var source: PlaybackQueueSource?
     
     private let player: QueuedAudioPlayer
+    
     private let audioSession: AudioSessionManager
     private let nowPlayingInfo: NowPlayingInfoController
     private let appLifecycle: AppLifecycleObserver
-    
+    private let remoteCommandController: RemoteCommandController
+
     private let updateFrequency = CMTime(value: 1, timescale: 10) // 1/10s
     
     private var shouldBePlaying = false
@@ -38,6 +39,7 @@ public final class SystemAudioPlayerIntegration {
         self.audioSession = AudioSessionManager()
         self.nowPlayingInfo = NowPlayingInfoController()
         self.appLifecycle = AppLifecycleObserver()
+        self.remoteCommandController = RemoteCommandController()
         
         player.timeEventFrequency = .custom(time: updateFrequency)
         
@@ -58,34 +60,14 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func setupRemoteCommands() {
-        player.remoteCommands = [
+        remoteCommandController.audio = self
+        remoteCommandController.enable(commands: [
             .pause,
             .play,
             .togglePlayPause,
             .previous,
             .next
-            ]
-        
-        player.remoteCommandController.handlePlayCommand = { [weak self] _ in
-            print("REMOTE PLAY")
-            guard let self = self, self.playingItem != nil else { return .noActionableNowPlayingItem }
-            self.play()
-            return .success
-        }
-
-        player.remoteCommandController.handlePauseCommand = { [weak self] _ in
-            print("REMOTE PAUSE")
-            guard let self = self, self.playingItem != nil else { return .noActionableNowPlayingItem }
-            self.pause()
-            return .success
-        }
-        
-        player.remoteCommandController.handleTogglePlayPauseCommand = { [weak self] _ in
-            print("REMOTE TOGGLE")
-            guard let self = self, self.playingItem != nil else { return .noActionableNowPlayingItem }
-            self.togglePlayPause()
-            return .success
-        }
+        ])
     }
     
     private func activateAudioSessionForPlaying() {
@@ -352,12 +334,12 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
         }
     }
     
-    public func moveToPreviousTrack() {
-        try? player.previous()
+    public func moveToPreviousTrack() throws {
+        try player.previous()
     }
     
-    public func moveToNextTrack() {
-        try? player.next()
+    public func moveToNextTrack() throws {
+        try player.next()
     }
     
     public func jumpToItemWithID(_ uuid: UUID) {

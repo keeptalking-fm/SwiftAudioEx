@@ -15,7 +15,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     /// The wrapper around the underlying AVPlayer
     let wrapper: AVPlayerWrapperProtocol = AVPlayerWrapper()
     
-    public let remoteCommandController: RemoteCommandController
     public let event = EventHolder()
     
     private(set) var currentItem: AudioItem?
@@ -25,18 +24,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
      If the loaded `AudioItem` conforms to `TimePitcher`-protocol this will be overriden.
      */
     public var audioTimePitchAlgorithm: AVAudioTimePitchAlgorithm = AVAudioTimePitchAlgorithm.timeDomain
-    
-    /**
-     Default remote commands to use for each playing item
-     */
-    public var remoteCommands: [RemoteCommand] = [] {
-        didSet {
-            if let item = currentItem {
-                self.enableRemoteCommands(forItem: item)
-            }
-        }
-    }
-    
     
     // MARK: - Getters from AVPlayerWrapper
 
@@ -134,14 +121,9 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     
     /**
      Create a new AudioPlayer.
-     
-     - parameter infoCenter: The InfoCenter to update. Default is `MPNowPlayingInfoCenter.default()`.
      */
-    public init(remoteCommandController: RemoteCommandController = RemoteCommandController()) {
-        self.remoteCommandController = remoteCommandController
-        
+    public init() {
         wrapper.delegate = self
-        self.remoteCommandController.audioPlayer = self
     }
     
     // MARK: - Player Actions
@@ -173,8 +155,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
                      options:(item as? AssetOptionsProviding)?.getAssetOptions())
         
         currentItem = item
-        
-        enableRemoteCommands(forItem: item)
     }
     
     /**
@@ -212,30 +192,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
      */
     public func seek(to seconds: TimeInterval) {
         wrapper.seek(to: seconds)
-    }
-    
-    // MARK: - Remote Command Center
-    
-    func enableRemoteCommands(_ commands: [RemoteCommand]) {
-        remoteCommandController.enable(commands: commands)
-    }
-    
-    func enableRemoteCommands(forItem item: AudioItem) {
-        if let item = item as? RemoteCommandable {
-            self.enableRemoteCommands(item.getCommands())
-        }
-        else {
-            self.enableRemoteCommands(remoteCommands)
-        }
-    }
-
-    /**
-     Syncs the current remoteCommands with the iOS command center.
-     Can be used to update item states - e.g. like, dislike and bookmark.
-     */
-    @available(*, deprecated, message: "Directly set .remoteCommands instead")
-    public func syncRemoteCommandsWithCommandCenter() {
-        self.enableRemoteCommands(remoteCommands)
     }
     
     // MARK: - Private
