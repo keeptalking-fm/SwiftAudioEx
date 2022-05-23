@@ -15,16 +15,10 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     /// The wrapper around the underlying AVPlayer
     let wrapper: AVPlayerWrapperProtocol = AVPlayerWrapper()
     
-    public let nowPlayingInfoController: NowPlayingInfoControllerProtocol
     public let remoteCommandController: RemoteCommandController
     public let event = EventHolder()
     
     private(set) var currentItem: AudioItem?
-    
-    /**
-     Set this to false to disable automatic updating of now playing info for control center and lock screen.
-     */
-    public var automaticallyUpdateNowPlayingInfo: Bool = true
     
     /**
      Controls the time pitch algorithm applied to each item loaded into the player.
@@ -143,9 +137,7 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
      
      - parameter infoCenter: The InfoCenter to update. Default is `MPNowPlayingInfoCenter.default()`.
      */
-    public init(nowPlayingInfoController: NowPlayingInfoControllerProtocol = NowPlayingInfoController(),
-                remoteCommandController: RemoteCommandController = RemoteCommandController()) {
-        self.nowPlayingInfoController = nowPlayingInfoController
+    public init(remoteCommandController: RemoteCommandController = RemoteCommandController()) {
         self.remoteCommandController = remoteCommandController
         
         wrapper.delegate = self
@@ -182,9 +174,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
         
         currentItem = item
         
-        if (automaticallyUpdateNowPlayingInfo) {
-            loadNowPlayingMetaValues()
-        }
         enableRemoteCommands(forItem: item)
     }
     
@@ -222,9 +211,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
      Seek to a specific time in the item.
      */
     public func seek(to seconds: TimeInterval) {
-        if automaticallyUpdateNowPlayingInfo {
-            updateNowPlayingCurrentTime(seconds)
-        }
         wrapper.seek(to: seconds)
     }
     
@@ -252,66 +238,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
         self.enableRemoteCommands(remoteCommands)
     }
     
-    // MARK: - NowPlayingInfo
-    
-    /**
-     Loads NowPlayingInfo-meta values with the values found in the current `AudioItem`. Use this if a change to the `AudioItem` is made and you want to update the `NowPlayingInfoController`s values.
-     
-     Reloads:
-     - Artist
-     - Title
-     - Album title
-     - Album artwork
-     */
-    public func loadNowPlayingMetaValues() {
-        guard let item = currentItem else { return }
-        
-        nowPlayingInfoController.set(keyValues: [
-            MediaItemProperty.artist(item.getArtist()),
-            MediaItemProperty.title(item.getTitle()),
-            MediaItemProperty.albumTitle(item.getAlbumTitle()),
-        ])
-        
-        loadArtwork(forItem: item)
-    }
-    
-    /**
-     Resyncs the playbackvalues of the currently playing `AudioItem`.
-     
-     Will resync:
-     - Current time
-     - Duration
-     - Playback rate
-     */
-    public func updateNowPlayingPlaybackValues() {
-        updateNowPlayingCurrentTime(currentTime)
-        updateNowPlayingDuration(duration)
-        updateNowPlayingRate(rate)
-    }
-    
-    private func updateNowPlayingDuration(_ duration: Double) {
-        nowPlayingInfoController.set(keyValue: MediaItemProperty.duration(duration))
-    }
-    
-    private func updateNowPlayingRate(_ rate: Float) {
-        nowPlayingInfoController.set(keyValue: NowPlayingInfoProperty.playbackRate(Double(rate)))
-    }
-    
-    private func updateNowPlayingCurrentTime(_ currentTime: Double) {
-        nowPlayingInfoController.set(keyValue: NowPlayingInfoProperty.elapsedPlaybackTime(currentTime))
-    }
-    
-    private func loadArtwork(forItem item: AudioItem) {
-        item.getArtwork { (image) in
-            if let image = image {
-                let artwork = MPMediaItemArtwork(boundsSize: image.size, requestHandler: { _ in image })
-                self.nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(artwork))
-            } else {
-                self.nowPlayingInfoController.set(keyValue: MediaItemProperty.artwork(nil))
-            }
-        }
-    }
-    
     // MARK: - Private
     
     func reset() {
@@ -332,19 +258,13 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     func AVWrapper(didChangeState state: AVPlayerWrapperState) {
         switch state {
         case .ready, .loading:
-            if (automaticallyUpdateNowPlayingInfo) {
-                updateNowPlayingPlaybackValues()
-            }
             setTimePitchingAlgorithmForCurrentItem()
         case .playing:
             // When a track starts playing, reset the rate to the stored rate
             rate = _rate;
             fallthrough
-        case .paused:
-            if (automaticallyUpdateNowPlayingInfo) {
-                updateNowPlayingPlaybackValues()
-            }
-        default: break
+        case .paused, .buffering, .idle:
+            break
         }
         event.stateChange.emit(data: state)
     }
@@ -362,9 +282,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     }
     
     func AVWrapper(seekTo seconds: Int, didFinish: Bool) {
-        if !didFinish && automaticallyUpdateNowPlayingInfo {
-            updateNowPlayingCurrentTime(currentTime)
-        }
         event.seek.emit(data: (seconds, didFinish))
     }
     

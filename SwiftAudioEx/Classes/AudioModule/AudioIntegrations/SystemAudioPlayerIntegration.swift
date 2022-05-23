@@ -26,7 +26,7 @@ public final class SystemAudioPlayerIntegration {
     
     private let player: QueuedAudioPlayer
     private let audioSession: AudioSessionManager
-    private let nowPlayingInfo: NewNowPlayingInfoController
+    private let nowPlayingInfo: NowPlayingInfoController
     private let appLifecycle: AppLifecycleObserver
     
     private let updateFrequency = CMTime(value: 1, timescale: 10) // 1/10s
@@ -36,16 +36,12 @@ public final class SystemAudioPlayerIntegration {
     public init() {
         self.player = QueuedAudioPlayer()
         self.audioSession = AudioSessionManager()
-        self.nowPlayingInfo = NewNowPlayingInfoController()
+        self.nowPlayingInfo = NowPlayingInfoController()
         self.appLifecycle = AppLifecycleObserver()
         
         player.timeEventFrequency = .custom(time: updateFrequency)
         
         setupRemoteCommands()
-                    
-        // The implementation inside the library is buggy -
-        // the progress is reported incorrectly when switching items
-        player.automaticallyUpdateNowPlayingInfo = false
                 
         player.event.stateChange.addListener(self, handleAudioPlayerStateChange)
         player.event.queueIndex.addListener(self, handleQueueIndexChange)

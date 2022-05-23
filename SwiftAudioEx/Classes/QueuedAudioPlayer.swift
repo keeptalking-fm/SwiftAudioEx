@@ -15,8 +15,8 @@ public class QueuedAudioPlayer: AudioPlayer, QueueManagerDelegate {
     
     let queueManager: QueueManager = QueueManager<AudioItem>()
 
-    public override init(nowPlayingInfoController: NowPlayingInfoControllerProtocol = NowPlayingInfoController(), remoteCommandController: RemoteCommandController = RemoteCommandController()) {
-        super.init(nowPlayingInfoController: nowPlayingInfoController, remoteCommandController: remoteCommandController)
+    public override init(remoteCommandController: RemoteCommandController = RemoteCommandController()) {
+        super.init(remoteCommandController: remoteCommandController)
         queueManager.delegate = self
     }
 

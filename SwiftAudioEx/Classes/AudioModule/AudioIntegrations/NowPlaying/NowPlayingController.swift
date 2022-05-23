@@ -7,12 +7,12 @@
 
 import MediaPlayer
 
-class NewNowPlayingInfoController {
+class NowPlayingInfoController {
     init() {
     }
 }
 
-extension NewNowPlayingInfoController {
+extension NowPlayingInfoController {
 
     func updateNowPlayingMetadata(_ metadata: NowPlayableStaticMetadata) {
        
