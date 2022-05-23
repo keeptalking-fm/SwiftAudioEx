@@ -146,11 +146,11 @@ public final class SystemAudioPlayerIntegration {
         
         let metadata = NowPlayableStaticMetadata(assetURL: playingItem.audioURL,
                                                  mediaType: .audio, // podcast?
-                                                 title: playingItem.getTitle() ?? "KeepTalkingFM",
-                                                 artist: playingItem.getArtist() ?? "",
+                                                 title: playingItem.metadata.authorName,
+                                                 artist: nil,
                                                  artwork: nil,
-                                                 albumArtist: playingItem.getArtist(),
-                                                 albumTitle: playingItem.getAlbumTitle())
+                                                 albumArtist: nil,
+                                                 albumTitle: playingItem.metadata.albumTitle)
         
         nowPlayingInfo.updateNowPlayingMetadata(metadata)
     }
@@ -366,26 +366,6 @@ extension PlaybackItem: AudioItem {
     
     public func getSourceType() -> SourceType {
         .stream
-    }
-    
-    // These metadata services below are not used.
-    // For now they are required for protocol conformance.
-    // This requirement will be removed soon when we clean up SwiftAudioEx from unused stuff.
-    
-    public func getArtist() -> String? {
-        nil
-    }
-    
-    public func getTitle() -> String? {
-        metadata.authorName
-    }
-    
-    public func getAlbumTitle() -> String? {
-        metadata.albumTitle
-    }
-    
-    public func getArtwork(_ handler: @escaping (UIImage?) -> Void) {
-        handler(nil)
     }
 }
 

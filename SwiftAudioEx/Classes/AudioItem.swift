@@ -15,14 +15,8 @@ public enum SourceType {
 }
 
 public protocol AudioItem {
-    
     func getSourceUrl() -> String
-    func getArtist() -> String?
-    func getTitle() -> String?
-    func getAlbumTitle() -> String?
     func getSourceType() -> SourceType
-    func getArtwork(_ handler: @escaping (UIImage?) -> Void)
-    
 }
 
 /// Make your `AudioItem`-subclass conform to this protocol to control which AVAudioTimePitchAlgorithm is used for each item.
