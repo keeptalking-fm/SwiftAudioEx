@@ -9,7 +9,7 @@ import Foundation
 import AVFoundation
 
 protocol AVPlayerItemNotificationObserverDelegate: AnyObject {
-    func itemDidPlayToEndTime()
+    func itemDidPlayToEndTime(_ item: AVPlayerItem)
 }
 
 /**
@@ -21,7 +21,6 @@ class AVPlayerItemNotificationObserver {
     
     private let notificationCenter: NotificationCenter = NotificationCenter.default
     
-    private(set) weak var observingItem: AVPlayerItem?
     weak var delegate: AVPlayerItemNotificationObserverDelegate?
     
     private(set) var isObserving: Bool = false
@@ -36,27 +35,25 @@ class AVPlayerItemNotificationObserver {
      - parameter item: The item to observe.
      - important: Cannot observe more than one item at a time.
      */
-    func startObserving(item: AVPlayerItem) {
+    func startObserving() {
         stopObservingCurrentItem()
-        observingItem = item
         isObserving = true
-        notificationCenter.addObserver(self, selector: #selector(itemDidPlayToEndTime), name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: item)
+        notificationCenter.addObserver(self, selector: #selector(itemDidPlayToEndTime(note:)), name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
     }
     
     /**
      Stop receiving notifications for the current item.
      */
     func stopObservingCurrentItem() {
-        guard let observingItem = observingItem, isObserving else {
+        guard isObserving else {
             return
         }
-        notificationCenter.removeObserver(self, name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: observingItem)
-        self.observingItem = nil
+        notificationCenter.removeObserver(self, name: Notification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
         isObserving = false
     }
     
-    @objc private func itemDidPlayToEndTime() {
-        delegate?.itemDidPlayToEndTime()
+    @objc private func itemDidPlayToEndTime(note: Notification) {
+        guard let object = note.object as? AVPlayerItem else { return }
+        delegate?.itemDidPlayToEndTime(object)
     }
-    
 }

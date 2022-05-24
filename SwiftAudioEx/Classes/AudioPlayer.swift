@@ -13,7 +13,7 @@ public typealias AudioPlayerState = AVPlayerWrapperState
 public class AudioPlayer: AVPlayerWrapperDelegate {
 
     /// The wrapper around the underlying AVPlayer
-    let wrapper: AVPlayerWrapperProtocol = AVPlayerWrapper()
+    let wrapper: AVPlayerWrapper = AVPlayerWrapper()
     
     public let event = EventHolder()
     

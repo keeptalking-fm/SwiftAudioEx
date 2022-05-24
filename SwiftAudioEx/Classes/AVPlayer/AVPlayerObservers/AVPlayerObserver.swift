@@ -25,6 +25,26 @@ protocol AVPlayerObserverDelegate: AnyObject {
      Called when the AVPlayer.rate changes.
      */
     func player(didChangeRate rate: Float)
+    
+    /**
+     Called when the AVPlayer.currentItem changes.
+     */
+    func player(currentItemDidChange item: AVPlayerItem?)
+    
+    /**
+     Called when the AVPlayer.currentItem.status changes.
+     */
+    func player(currentItemStatusDidChange status: AVPlayerItem.Status)
+    
+    /**
+     Called when the AVPlayer.currentItem.duration changes.
+     */
+    func player(currentItemDurationDidChange duration: CMTime?)
+    
+    /**
+     Called when the AVPlayer.currentItem.timebase.effectiveRate changes.
+     */
+    func player(currentItemEffectiveRateDidChange effectiveRate: Double, rate: Double)
 }
 
 /**
@@ -32,18 +52,10 @@ protocol AVPlayerObserverDelegate: AnyObject {
  */
 class AVPlayerObserver: NSObject {
 
-    private static var context = 0
-    private let main: DispatchQueue = .main
-
-    private struct AVPlayerKeyPath {
-        static let status = #keyPath(AVPlayer.status)
-        static let timeControlStatus = #keyPath(AVPlayer.timeControlStatus)
-        static let rate = #keyPath(AVPlayer.rate)
-    }
-
-    private let statusChangeOptions: NSKeyValueObservingOptions = [.new, .initial]
-    private let timeControlStatusChangeOptions: NSKeyValueObservingOptions = [.new]
     private(set) var isObserving: Bool = false
+    
+    private var keyPathObservations: [NSObjectProtocol] = []
+    private var effectiveRateObserver: AnyObject?
 
     weak var delegate: AVPlayerObserverDelegate?
     weak var player: AVPlayer? {
@@ -65,62 +77,56 @@ class AVPlayerObserver: NSObject {
         }
         stopObserving()
         isObserving = true
-        player.addObserver(self, forKeyPath: AVPlayerKeyPath.status, options: statusChangeOptions, context: &AVPlayerObserver.context)
-        player.addObserver(self, forKeyPath: AVPlayerKeyPath.timeControlStatus, options: timeControlStatusChangeOptions, context: &AVPlayerObserver.context)
-        player.addObserver(self, forKeyPath: AVPlayerKeyPath.rate, options: [.new], context: &AVPlayerObserver.context)
+        
+        player.observe(\.status, options: [.new, .initial]) { [weak self] p, change in
+            self?.delegate?.player(statusDidChange: p.status)
+        }.store(in: &keyPathObservations)
+        
+        player.observe(\.timeControlStatus, options: [.new], changeHandler: { [weak self] p, change in
+            self?.delegate?.player(didChangeTimeControlStatus: p.timeControlStatus)
+        }).store(in: &keyPathObservations)
+        
+        player.observe(\.rate, options: [.new]) { [weak self] p, change in
+            self?.delegate?.player(didChangeRate: p.rate)
+        }.store(in: &keyPathObservations)
+        
+        player.observe(\.currentItem, options: [.new], changeHandler: { [weak self] p, change in
+            self?.delegate?.player(currentItemDidChange: p.currentItem)
+        }).store(in: &keyPathObservations)
+        
+        player.observe(\.currentItem?.status, options: [.new], changeHandler: { [weak self] p, change in
+            self?.delegate?.player(currentItemStatusDidChange: p.currentItem?.status ?? .unknown)
+        }).store(in: &keyPathObservations)
+        
+        player.observe(\.currentItem?.duration, options: [.new]) { [weak self] p, change in
+            self?.delegate?.player(currentItemDurationDidChange: p.currentItem?.duration)
+        }.store(in: &keyPathObservations)
+        
+        effectiveRateObserver =
+        NotificationCenter.default.addObserver(forName: Notification.Name(kCMTimebaseNotification_EffectiveRateChanged as String), object: nil, queue: .main) { [weak self] note in
+            guard let timebase = asCMTimebase(note.object), timebase == self?.player?.currentItem?.timebase else { return }
+            self?.delegate?.player(currentItemEffectiveRateDidChange: timebase.effectiveRate, rate: timebase.rate)
+        }
     }
 
     func stopObserving() {
-        guard let player = player, isObserving else {
-            return
-        }
-        player.removeObserver(self, forKeyPath: AVPlayerKeyPath.status, context: &AVPlayerObserver.context)
-        player.removeObserver(self, forKeyPath: AVPlayerKeyPath.timeControlStatus, context: &AVPlayerObserver.context)
+        keyPathObservations = []
+        effectiveRateObserver.map ( NotificationCenter.default.removeObserver )
+        effectiveRateObserver = nil
         isObserving = false
     }
+}
 
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
-        guard context == &AVPlayerObserver.context, let observedKeyPath = keyPath else {
-            super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
-            return
-        }
-
-        switch observedKeyPath {
-        case AVPlayerKeyPath.status:
-            handleStatusChange(change)
-
-        case AVPlayerKeyPath.timeControlStatus:
-            handleTimeControlStatusChange(change)
-
-        case AVPlayerKeyPath.rate:
-            handleRateChange(change)
-        default:
-            break
-        }
+private extension NSObjectProtocol {
+    func store(in collection: inout [NSObjectProtocol]) {
+        collection.append(self)
     }
+}
 
-    private func handleStatusChange(_ change: [NSKeyValueChangeKey: Any]?) {
-        let status: AVPlayer.Status
-        if let statusNumber = change?[.newKey] as? NSNumber {
-            status = AVPlayer.Status(rawValue: statusNumber.intValue)!
-        } else {
-            status = .unknown
-        }
-        delegate?.player(statusDidChange: status)
-    }
-
-    private func handleTimeControlStatusChange(_ change: [NSKeyValueChangeKey: Any]?) {
-        let status: AVPlayer.TimeControlStatus
-        if let statusNumber = change?[.newKey] as? NSNumber {
-            status = AVPlayer.TimeControlStatus(rawValue: statusNumber.intValue)!
-            delegate?.player(didChangeTimeControlStatus: status)
-        }
-    }
-    
-    private func handleRateChange(_ change: [NSKeyValueChangeKey: Any]?) {
-        guard let player = player else {
-            return
-        }
-        delegate?.player(didChangeRate: player.rate)
-    }
+/// Can't use `as?` with CoreFoundation types (CMTimebase is one)
+/// https://stackoverflow.com/questions/43927167/trouble-retrieving-a-cgcolor-from-a-swift-dictionary
+private func asCMTimebase<T>(_ value: T?) -> CMTimebase? {
+    guard let value = value else { return nil }
+    guard CFGetTypeID(value as CFTypeRef) == CMTimebase.typeID else { return nil }
+    return (value as! CMTimebase)
 }

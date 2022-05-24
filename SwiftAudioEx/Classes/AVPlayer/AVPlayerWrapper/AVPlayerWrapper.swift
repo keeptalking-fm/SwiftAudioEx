@@ -18,7 +18,20 @@ public enum PlaybackEndedReason: String {
     case jumpedToIndex
 }
 
-class AVPlayerWrapper: AVPlayerWrapperProtocol {
+protocol AVPlayerWrapperDelegate: AnyObject {
+    
+    func AVWrapper(didChangeState state: AVPlayerWrapperState)
+    func AVWrapper(didChangeEffectiveRate effectiveRate: Double, rate: Double)
+    func AVWrapper(secondsElapsed seconds: Double)
+    func AVWrapper(failedWithError error: Error?)
+    func AVWrapper(seekTo seconds: Int, didFinish: Bool)
+    func AVWrapper(didUpdateDuration duration: Double)
+    func AVWrapper(didReceiveMetadata metadata: [AVTimedMetadataGroup])
+    func AVWrapperItemDidPlayToEndTime()
+    func AVWrapperDidRecreateAVPlayer()
+}
+
+class AVPlayerWrapper {
     
     struct Constants {
         static let assetPlayableKey = "playable"
@@ -38,7 +51,7 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
     /// True when the track was paused for the purpose of switching tracks
     fileprivate var pausedForLoad: Bool = false
     
-    public init() {
+    init() {
         playerTimeObserver = AVPlayerTimeObserver(periodicObserverTimeInterval: timeEventFrequency.getTime())
         playerTimeObserver.player = avPlayer
 
@@ -181,7 +194,12 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
     
     
     
-    func load(from url: URL, forceRecreateAVPlayer: Bool, playWhenReady: Bool, options: [String: Any]? = nil) {
+    func load(from url: URL, forceRecreateAVPlayer: Bool, playWhenReady: Bool, initialTime: TimeInterval? = nil, options: [String: Any]? = nil) {
+        self.initialTime = initialTime
+
+        pausedForLoad = true
+        pause()
+        
         reset(soft: true)
         self.playWhenReady = playWhenReady
 
@@ -211,7 +229,7 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
                             // Register for events
                             self.playerTimeObserver.registerForBoundaryTimeEvents()
                             self.playerObserver.startObserving()
-                            self.playerItemNotificationObserver.startObserving(item: currentItem)
+                            self.playerItemNotificationObserver.startObserving()
                             self.playerItemObserver.startObserving(item: currentItem)
 
                             if pendingAsset.availableChapterLocales.count > 0 {
@@ -245,15 +263,6 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
                 }
             })
         }
-    }
-    
-    func load(from url: URL, forceRecreateAVPlayer: Bool, playWhenReady: Bool, initialTime: TimeInterval? = nil, options: [String : Any]? = nil) {
-        self.initialTime = initialTime
-
-        pausedForLoad = true
-        pause()
-
-        self.load(from: url, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady, options: options)
     }
     
     // MARK: - Util
@@ -332,6 +341,21 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
     func player(didChangeRate rate: Float) {
         // don't react to player.rate changing - the corresponding changes are done in observation for timeControlStatus. 
     }
+    
+    func player(currentItemDidChange item: AVPlayerItem?) {
+        
+    }
+    
+    func player(currentItemStatusDidChange status: AVPlayerItem.Status) {
+        
+    }
+    
+    func player(currentItemDurationDidChange duration: CMTime?) {
+        
+    }
+    
+    func player(currentItemEffectiveRateDidChange effectiveRate: Double, rate: Double) {
+    }
 }
 
 extension AVPlayerWrapper: AVPlayerTimeObserverDelegate {
@@ -352,7 +376,10 @@ extension AVPlayerWrapper: AVPlayerItemNotificationObserverDelegate {
     
     // MARK: - AVPlayerItemNotificationObserverDelegate
     
-    func itemDidPlayToEndTime() {
+    func itemDidPlayToEndTime(_ item: AVPlayerItem) {
+        guard item == avPlayer.currentItem else {
+            return
+        }
         delegate?.AVWrapperItemDidPlayToEndTime()
     }
     
