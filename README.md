@@ -2,10 +2,6 @@
 
 # SwiftAudio
 
-[![codecov](https://codecov.io/gh/DoubleSymmetry/SwiftAudio/branch/master/graph/badge.svg?token=FD5THGSHM5)](https://codecov.io/gh/DoubleSymmetry/SwiftAudio)
-[![License](https://img.shields.io/cocoapods/l/SwiftAudio.svg?style=flat)](http://cocoapods.org/pods/SwiftAudio)
-[![Platform](https://img.shields.io/cocoapods/p/SwiftAudio.svg?style=flat)](http://cocoapods.org/pods/SwiftAudio)
-
 SwiftAudio is an audio player written in Swift, making it simpler to work with audio playback from streams and files.
 
 ## Example
@@ -14,7 +10,7 @@ To see the audio player in action, run the example project!
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
 
 ## Requirements
-iOS 11.0+
+iOS 13.0+
 
 ## Installation
 
@@ -36,21 +32,6 @@ let package = Package(
     // ...
 )
 ```
-
-### CocoaPods
-SwiftAudio is available through [CocoaPods](http://cocoapods.org). To install
-it, simply add the following line to your Podfile:
-
-```ruby
-pod 'SwiftAudio', '~> 0.11.2'
-```
-
-### Carthage
-SwiftAudio supports [Carthage](https://github.com/Carthage/Carthage). Add this to your Cartfile:
-```ruby
-github "jorgenhenrichsen/SwiftAudio" ~> 0.11.2
-```
-Then follow the rest of Carthage instructions on [adding a framework](https://github.com/Carthage/Carthage#adding-frameworks-to-an-application).
 
 ## Usage
 
@@ -131,31 +112,9 @@ try? AudioSessionController.shared.activateSession()
 App Settings -> Capabilities -> Background Modes -> Check 'Audio, AirPlay, and Picture in Picture'.
 
 #### Interruptions
-If you are using the `AudioSessionController` for setting up the audio session, you can use it to handle interruptions too.
-Implement `AudioSessionControllerDelegate` and you will be notified by `handleInterruption(type: AVAudioSessionInterruptionType)`.
+If you are using the `AudioSessionManager` for setting up the audio session, you can use it to handle interruptions too.
+Implement `AudioSessionManagerDelegate` and you will be notified by `handleInterruption(type: AVAudioSessionInterruptionType)`.
 If you are storing progress for playback time on items when the app quits, it can be a good idea to do it on interruptions as well.
-To disable interruption notifcations set `isObservingForInterruptions` to `false`.
-
-### Now Playing Info
-The `AudioPlayer` can automatically update `nowPlayingInfo` for you. This requires `automaticallyUpdateNowPlayingInfo` to be true (default), and that the `AudioItem` that is passed in return values for the getters. The `AudioPlayer` will update: artist, title, album, artwork, elapsed time, duration and rate.
-
-Additional properties for items can be set by accessing the setter of the `nowPlayingInforController`:
-```swift
-    let player = AudioPlayer()
-    player.load(item: someItem)
-    player.nowPlayingInfoController.set(keyValue: NowPlayingInfoProperty.isLiveStream(true))
-```
-The set(keyValue:) and set(keyValues:) accept both `MediaItemProperty` and `NowPlayingInfoProperty`.
-
-The info can be forced to reload/update from the `AudioPlayer`.
-```swift
-    audioPlayer.loadNowPlayingMetaValues()
-    audioPlayer.updateNowPlayingPlaybackValues()
-```
-The current info can be cleared with:
-```swift
-    audioPlayer.nowPlayingInfoController.clear()
-```
 
 ### Remote Commands
 To enable remote commands for the player you need to populate the RemoteCommands array for the player:
@@ -167,7 +126,6 @@ audioPlayer.remoteCommands = [
     .skipBackward(intervals: [30]),
   ]
 ```
-These commands will be activated for each `AudioItem`. If you need some audio items to have different commands, implement `RemoteCommandable` in a custom `AudioItem`-subclass. These commands will override the commands found in `AudioPlayer.remoteCommands` so make sure to supply all commands you need for that particular `AudioItem`.
 
 #### Custom handlers for remote commands
 To supply custom handlers for your remote commands, just override the handlers contained in the player's `RemoteCommandController`:
