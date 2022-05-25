@@ -142,7 +142,7 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func updateStaticNowPlayingMetadata() {
-        guard let playingItem = player.state.currentItem as? PlaybackItem else { return }
+        guard let playingItem = player.state.currentAudioItem as? PlaybackItem else { return }
         
         let metadata = NowPlayableStaticMetadata(assetURL: playingItem.audioURL,
                                                  mediaType: .audio, // podcast?
@@ -228,7 +228,7 @@ extension SystemAudioPlayerIntegration: AppLifecycleObserverDelegate {
 extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     
     public var playingItem: PlaybackItem? {
-        return player.state.currentItem as? PlaybackItem
+        return player.state.currentAudioItem as? PlaybackItem
     }
     
     public var playingStatus: AudioPlayerPlayingStatus {
@@ -322,16 +322,16 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func moveToPreviousTrack() throws {
-        try player.previous()
+        player.previous()
     }
     
     public func moveToNextTrack() throws {
-        try player.next()
+        player.next()
     }
     
     public func jumpToItemWithID(_ uuid: UUID) {
         let playWhenReady = AutoPlayBehaviour.playIfAlreadyPlaying.shouldAutoPlay(wasPlaying: isPlaying)
-        try? player.jumpToItem(id: uuid, playWhenReady: playWhenReady)
+        player.jumpToItem(id: uuid, playWhenReady: playWhenReady)
     }
 }
 

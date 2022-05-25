@@ -16,12 +16,12 @@ protocol AVQueuePlayerWrapperDelegate: AnyObject {
 class AVQueuePlayerWrapper {
 
     struct State: Equatable {
-        var currentItem: AudioItem?
+        var currentAudioItem: AudioItem?
         var playerState: AudioPlayerPlayingStatus = .nothingToPlay
         var duration: Seconds
         
         static func == (lhs: AVQueuePlayerWrapper.State, rhs: AVQueuePlayerWrapper.State) -> Bool {
-            return lhs.playerState == rhs.playerState && lhs.currentItem?.id == rhs.currentItem?.id && lhs.duration == rhs.duration
+            return lhs.playerState == rhs.playerState && lhs.currentAudioItem?.id == rhs.currentAudioItem?.id && lhs.duration == rhs.duration
         }
     }
     
@@ -32,6 +32,11 @@ class AVQueuePlayerWrapper {
         init(audioItem: AudioItem) {
             sourceItem = audioItem
             asset = AVURLAsset(url: audioItem.sourceURL)
+        }
+        
+        func makeAVPlayerItem() -> AVPlayerItem {
+            // automaticallyLoadedAssetKeys is required here. Without it, the player will sometimes freeze the main thread forever
+            AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: ["playable"])
         }
     }
     
@@ -61,7 +66,7 @@ class AVQueuePlayerWrapper {
     }
 
     init() {
-        state = State(currentItem: nil, playerState: .nothingToPlay, duration: 0)
+        state = State(currentAudioItem: nil, playerState: .nothingToPlay, duration: 0)
         
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
@@ -79,21 +84,22 @@ class AVQueuePlayerWrapper {
     }
     
     // MARK: - State -
-
+    
+    private var currentItem: Item? {
+        guard let playingItem = avPlayer.currentItem,
+              let item = items.first(where: { $0.asset === playingItem.asset }) else {
+            return nil
+        }
+        return item
+    }
+    
     private func recalcState() {
         // Many KVO properties change at once.
         // To avoid too many callbacks (resulting in jumpy Now Playing info since it updates async)
         // making sure multiple callbacks are not called for partial changes
         // (hence always recalculating from actual state and not looking at which part changed in KVO)
         
-        let currentItem: AudioItem?
-        if let playingItem = avPlayer.currentItem,
-           let item = items.first(where: { $0.asset === playingItem.asset })
-        {
-            currentItem = item.sourceItem
-        } else {
-            currentItem = nil
-        }
+        let currentItem: AudioItem? = currentItem?.sourceItem
         
         let playerState: AudioPlayerPlayingStatus
         switch avPlayer.status {
@@ -124,7 +130,7 @@ class AVQueuePlayerWrapper {
         }
         
         let prevState = state
-        let newState = State(currentItem: currentItem, playerState: playerState, duration: duration)
+        let newState = State(currentAudioItem: currentItem, playerState: playerState, duration: duration)
         if prevState != newState {
             state = newState
             delegate?.newStateDidChange(in: self)
@@ -152,7 +158,7 @@ class AVQueuePlayerWrapper {
         
         self.items = items.map { Item(audioItem: $0) }
         // automaticallyLoadedAssetKeys is required here. Without it, the player will sometimes freeze the main thread forever
-        let playerItems = self.items.map({ AVPlayerItem(asset:$0.asset, automaticallyLoadedAssetKeys: ["playable"]) })
+        let playerItems = self.items.map({ $0.makeAVPlayerItem() })
         
 //        self.observer.player = self.avPlayer
 //        self.observer.startObserving()
@@ -235,12 +241,58 @@ class AVQueuePlayerWrapper {
     }
     
     func previous() {
-        // TODO: insert an item
+        // fx the queue is: [current, a, b]
+        // it will become: [previous, current, a, b]
+        
+        guard let current = state.currentAudioItem else { return }
+        guard let currentIndex = items.firstIndex(where: { $0.sourceItem.id == current.id }) else { return }
+        guard currentIndex != items.startIndex else { return }
+        
+        let previousIndex = items.index(before: currentIndex)
+        
+        let newPlayerItem = items[previousIndex].makeAVPlayerItem()
+        let newCurrentPlayerItemCopy = items[currentIndex].makeAVPlayerItem()
+        
+        if avPlayer.canInsert(newPlayerItem, after: avPlayer.currentItem) {
+            avPlayer.insert(newPlayerItem, after: avPlayer.currentItem)
+            
+            if avPlayer.canInsert(newCurrentPlayerItemCopy, after: newPlayerItem) {
+                avPlayer.insert(newCurrentPlayerItemCopy, after: newPlayerItem)
+            }
+            avPlayer.advanceToNextItem()
+        }
     }
     
-    func jumpToItem(id: UUID, playWhenReady: Bool) {
-//        guard let matchingItem = items
-//                .first(where: { $0.element.metadata.id == id })
+    func jumpToItem(id idToJumpTo: UUID, playWhenReady: Bool) {
+        guard let newItem = items.first(where: { $0.sourceItem.id == idToJumpTo }) else { return }
+
+        if let indexInQueue = avPlayer.items().firstIndex(where: { $0.asset === newItem.asset }), indexInQueue != avPlayer.items().startIndex {
+
+            // the item in question is ahead and not current
+
+            let itemsToRemove = avPlayer.items()[0...indexInQueue - 1]
+            itemsToRemove.forEach(avPlayer.remove)
+        }
+        else {
+            // the item in question is not in the queue, insert it before
+            // fx the queue is: [current, a, b]
+            // it will become: [withID, current, a, b]
+            
+            guard let current = currentItem else { return }
+            guard let newItem = items.first(where: { $0.sourceItem.id == idToJumpTo }) else { return }
+            
+            let newPlayerItem = newItem.makeAVPlayerItem()
+            let newCurrentPlayerItemCopy = current.makeAVPlayerItem()
+            
+            if avPlayer.canInsert(newPlayerItem, after: avPlayer.currentItem) {
+                avPlayer.insert(newPlayerItem, after: avPlayer.currentItem)
+                
+                if avPlayer.canInsert(newCurrentPlayerItemCopy, after: newPlayerItem) {
+                    avPlayer.insert(newCurrentPlayerItemCopy, after: newPlayerItem)
+                }
+                avPlayer.advanceToNextItem()
+            }
+        }
     }
 }
 
