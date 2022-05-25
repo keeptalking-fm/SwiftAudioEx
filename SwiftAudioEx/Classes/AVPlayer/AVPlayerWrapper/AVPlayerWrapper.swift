@@ -307,7 +307,7 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
         case .waitingToPlayAtSpecifiedRate:
             state = .buffering
         case .playing:
-            state = .playing
+            state = .playing(rate: avPlayer.rate)
         @unknown default:
             break
         }
@@ -361,7 +361,7 @@ extension AVPlayerWrapper: AVPlayerTimeObserverDelegate {
     // MARK: - AVPlayerTimeObserverDelegate
     
     func audioDidStart() {
-        state = .playing
+        state = .playing(rate: avPlayer.rate)
     }
     
     func timeEvent(time: CMTime) {

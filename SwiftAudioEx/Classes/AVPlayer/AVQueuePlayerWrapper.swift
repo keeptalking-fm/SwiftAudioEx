@@ -83,7 +83,7 @@ class AVQueuePlayerWrapper {
                     case .waitingToPlayAtSpecifiedRate:
                         return .buffering
                     case .playing:
-                        return .playing
+                        return .playing(rate: avPlayer.rate)
                     @unknown default:
                         return .paused
                 }
@@ -209,15 +209,6 @@ class AVQueuePlayerWrapper {
     func jumpToItem(id: UUID, playWhenReady: Bool) {
 //        guard let matchingItem = items
 //                .first(where: { $0.element.metadata.id == id })
-    }
-    
-    var realRate: Float {
-        switch playerState {
-            case .idle, .loading, .ready, .buffering, .paused:
-                return 0.0
-            case .playing:
-                return avPlayer.rate
-        }
     }
 }
 

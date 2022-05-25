@@ -118,7 +118,7 @@ public final class SystemAudioPlayerIntegration {
     
     func handleRateChange() {
         // Mostly we don't need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
-        print("✅ rate \(player.realRate)")
+        print("✅ rate \(player.playerState)")
         
         switch player.playerState {
                 
@@ -146,7 +146,7 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func updateNowPlayingPlaybackMetadata(onlyIfRateChanged: Bool) {
-        let metadata = NowPlayableDynamicMetadata(rate: player.realRate,
+        let metadata = NowPlayableDynamicMetadata(rate: player.playerState.rate,
                                                   position: Float(timeStatus?.position ?? 0),
                                                   duration: Float(timeStatus?.duration ?? 0))
         
