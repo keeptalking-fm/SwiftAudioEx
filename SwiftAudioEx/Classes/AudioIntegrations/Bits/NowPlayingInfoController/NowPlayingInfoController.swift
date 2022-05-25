@@ -32,10 +32,14 @@ extension NowPlayingInfoController {
         nowPlayingInfoCenter.nowPlayingInfo = nowPlayingInfo
     }
     
-    func updateNowPlayingPlaybackInfo(_ metadata: NowPlayableDynamicMetadata) {
+    func updateNowPlayingPlaybackInfo(_ metadata: NowPlayableDynamicMetadata, onlyIfRateChanged: Bool) {
         
         let nowPlayingInfoCenter = MPNowPlayingInfoCenter.default()
         var nowPlayingInfo = nowPlayingInfoCenter.nowPlayingInfo ?? [:]
+        
+        if onlyIfRateChanged, let alreadySetRate = nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] as? Float, alreadySetRate == metadata.rate {
+            return
+        }
         
         print("📱 Set playback info: rate \(metadata.rate), position \(metadata.position), duration \(metadata.duration)")
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = metadata.duration

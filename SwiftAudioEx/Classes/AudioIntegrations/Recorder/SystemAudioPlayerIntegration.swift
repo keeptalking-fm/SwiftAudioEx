@@ -91,14 +91,14 @@ public final class SystemAudioPlayerIntegration {
     private func handleAudioPlayerStateChange(state: AudioPlayerState) {
         print("⏯ stateChange ->", state, player.currentTime, "/", player.duration)
         checkBackgroundTasksOnStateChange()
-        updateNowPlayingPlaybackMetadata()
+        updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all.subtracting(.playingItem), in: self)
     }
     
     private func handleQueueIndexChange(data: AudioPlayer.QueueIndexEventData) {
         print("⏯ queueIndex ->", data, player.currentTime, "/", player.duration, "state", player.playerState)
         updateStaticNowPlayingMetadata()
-        updateNowPlayingPlaybackMetadata()
+        updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all, in: self)
     }
     
@@ -109,7 +109,7 @@ public final class SystemAudioPlayerIntegration {
     
     private func handleDurationChange(data: AudioPlayer.UpdateDurationEventData) {
         print("⏯ updateDuration ->", player.currentTime, "/", player.duration)
-        updateNowPlayingPlaybackMetadata()
+        updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
@@ -117,7 +117,18 @@ public final class SystemAudioPlayerIntegration {
         // Don't think we need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
         // if we were to update Now Playing info here, would need to filter on data.rate
         // because data.effectiveRate changes very often, as it is extremely precise.
-        print("✅ rate \(data.rate) | effective rate: \(data.effectiveRate)")
+        print("✅ rate \(data.rate) | effective rate: \(data.effectiveRate)", Thread.isMainThread)
+        
+        switch player.playerState {
+                
+            case .loading, .idle:
+                break
+            case .ready, .buffering, .paused:
+                break
+            case .playing:
+                updateNowPlayingPlaybackMetadata(onlyIfRateChanged: true)
+                break
+        }
     }
     
     private func checkBackgroundTasksOnStateChange() {
@@ -133,12 +144,12 @@ public final class SystemAudioPlayerIntegration {
         }
     }
     
-    private func updateNowPlayingPlaybackMetadata() {
+    private func updateNowPlayingPlaybackMetadata(onlyIfRateChanged: Bool) {
         let metadata = NowPlayableDynamicMetadata(rate: player.realRate,
                                                   position: Float(timeStatus?.position ?? 0),
                                                   duration: Float(timeStatus?.duration ?? 0))
         
-        nowPlayingInfo.updateNowPlayingPlaybackInfo(metadata)
+        nowPlayingInfo.updateNowPlayingPlaybackInfo(metadata, onlyIfRateChanged: onlyIfRateChanged)
     }
     
     private func updateStaticNowPlayingMetadata() {

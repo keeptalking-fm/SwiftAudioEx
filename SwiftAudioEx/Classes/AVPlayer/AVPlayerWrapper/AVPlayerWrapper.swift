@@ -351,10 +351,13 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
     }
     
     func player(currentItemDurationDidChange duration: CMTime?) {
-        
+        if let duration = duration, duration.isNumeric {
+            delegate?.AVWrapper(didUpdateDuration: duration.seconds)
+        }
     }
     
     func player(currentItemEffectiveRateDidChange effectiveRate: Double, rate: Double) {
+        delegate?.AVWrapper(didChangeEffectiveRate: effectiveRate, rate: rate)
     }
 }
 
@@ -390,7 +393,6 @@ extension AVPlayerWrapper: AVPlayerItemObserverDelegate {
     // MARK: - AVPlayerItemObserverDelegate
     
     func item(didUpdateDuration duration: Double) {
-        delegate?.AVWrapper(didUpdateDuration: duration)
     }
     
     func item(didReceiveMetadata metadata: [AVTimedMetadataGroup]) {
@@ -398,6 +400,5 @@ extension AVPlayerWrapper: AVPlayerItemObserverDelegate {
     }
      
     func item(didUpdateEffectiveRate effectiveRate: Double, rate: Double) {
-        delegate?.AVWrapper(didChangeEffectiveRate: effectiveRate, rate: rate)
     }
 }
