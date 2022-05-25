@@ -18,6 +18,8 @@ public enum PlaybackEndedReason: String {
     case jumpedToIndex
 }
 
+public typealias AVPlayerWrapperState = AudioPlayerPlayingStatus
+
 protocol AVPlayerWrapperDelegate: AnyObject {
     
     func AVWrapper(didChangeState state: AVPlayerWrapperState)
@@ -68,7 +70,7 @@ class AVPlayerWrapper {
     
     // MARK: - AVPlayerWrapperProtocol
 
-    fileprivate(set) var state: AVPlayerWrapperState = AVPlayerWrapperState.idle {
+    fileprivate(set) var state: AVPlayerWrapperState = AVPlayerWrapperState.nothingToPlay {
         didSet {
             if oldValue != state {
                 delegate?.AVWrapper(didChangeState: state)
@@ -176,7 +178,7 @@ class AVPlayerWrapper {
     
     func seek(to seconds: TimeInterval) {
        // if the player is loading then we need to defer seeking until it's ready.
-       if (state == AVPlayerWrapperState.loading) {
+       if (state == AVPlayerWrapperState.pending) {
          initialTime = seconds
        } else {
          avPlayer.seek(to: CMTimeMakeWithSeconds(seconds, preferredTimescale: 1000)) { (finished) in
@@ -209,7 +211,7 @@ class AVPlayerWrapper {
         pendingAsset = AVURLAsset(url: url, options: options)
         
         if let pendingAsset = pendingAsset {
-            state = .loading
+            state = .pending
             pendingAsset.loadValuesAsynchronously(forKeys: [Constants.assetPlayableKey], completionHandler: { [weak self] in
                 guard let self = self else { return }
                 
@@ -299,13 +301,13 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
         switch status {
         case .paused:
             if currentItem == nil {
-                state = .idle
+                state = .nothingToPlay
             }
             else if pausedForLoad != true {
                 state = .paused
             }
         case .waitingToPlayAtSpecifiedRate:
-            state = .buffering
+            state = .waitingToPlay
         case .playing:
             state = .playing(rate: avPlayer.rate)
         @unknown default:
@@ -316,7 +318,7 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
     func player(statusDidChange status: AVPlayer.Status) {
         switch status {
         case .readyToPlay:
-            state = .ready
+            state = playWhenReady ? .waitingToPlay : .paused
             pausedForLoad = false
             if playWhenReady && (initialTime ?? 0) == 0 {
                 play()

@@ -200,13 +200,13 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
     
     func AVWrapper(didChangeState state: AVPlayerWrapperState) {
         switch state {
-        case .ready, .loading:
+        case .pending:
             setTimePitchingAlgorithmForCurrentItem()
         case .playing:
             // When a track starts playing, reset the rate to the stored rate
             rate = _rate;
             fallthrough
-        case .paused, .buffering, .idle:
+        case .paused, .waitingToPlay, .nothingToPlay:
             break
         }
         event.stateChange.emit(data: state)

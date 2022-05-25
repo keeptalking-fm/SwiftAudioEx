@@ -58,12 +58,12 @@ public struct AudioPlayerStateChange: OptionSet {
     public static let all: AudioPlayerStateChange = [.state, .timeStatus]
 }
 
-public enum AudioPlayerPlayingStatus {
+public enum AudioPlayerPlayingStatus: Equatable {
     case pending
     case nothingToPlay
     case paused
     case waitingToPlay
-    case playing
+    case playing(rate: Float)
 }
 
 public struct AudioPlayerTimeStatus: Equatable {

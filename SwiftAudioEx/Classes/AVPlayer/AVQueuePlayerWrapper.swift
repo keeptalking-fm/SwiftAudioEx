@@ -17,7 +17,7 @@ class AVQueuePlayerWrapper {
 
     struct State: Equatable {
         var currentItem: AudioItem?
-        var playerState: AVPlayerWrapperState = .idle
+        var playerState: AudioPlayerPlayingStatus = .nothingToPlay
         var duration: Seconds
         
         static func == (lhs: AVQueuePlayerWrapper.State, rhs: AVQueuePlayerWrapper.State) -> Bool {
@@ -61,7 +61,7 @@ class AVQueuePlayerWrapper {
     }
 
     init() {
-        state = State(currentItem: nil, playerState: .idle, duration: 0)
+        state = State(currentItem: nil, playerState: .nothingToPlay, duration: 0)
         
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
@@ -95,25 +95,25 @@ class AVQueuePlayerWrapper {
             currentItem = nil
         }
         
-        let playerState: AVPlayerWrapperState
+        let playerState: AudioPlayerPlayingStatus
         switch avPlayer.status {
             case .unknown:
-                playerState = avPlayer.currentItem == nil ? .idle : .loading
+                playerState = avPlayer.currentItem == nil ? .nothingToPlay : .pending
             case .readyToPlay:
                 switch avPlayer.timeControlStatus {
                     case .paused:
-                        playerState = avPlayer.currentItem == nil ? .idle : .paused
+                        playerState = avPlayer.currentItem == nil ? .nothingToPlay : .paused
                     case .waitingToPlayAtSpecifiedRate:
-                        playerState = avPlayer.currentItem == nil ? .idle : .buffering
+                        playerState = avPlayer.currentItem == nil ? .nothingToPlay : .waitingToPlay
                     case .playing:
                         playerState = .playing(rate: avPlayer.rate)
                     @unknown default:
                         playerState = .paused
                 }
             case .failed:
-                playerState = .loading
+                playerState = .pending
             @unknown default:
-                playerState = .idle
+                playerState = .nothingToPlay
         }
         
         let duration: Seconds
@@ -284,6 +284,40 @@ extension AVQueuePlayerWrapper: AVPlayerTimeObserverDelegate {
         delegate?.elapsedDidChange(in: self)
     }
 }
+
+extension AudioPlayerPlayingStatus {
+    var rate: Float {
+        switch self {
+            case .pending:
+                return 0
+            case .waitingToPlay:
+                return 0
+            case .paused:
+                return 0
+            case .playing(let rate):
+                return rate
+            case .nothingToPlay:
+                return 0
+        }
+    }
+    
+    var isBufferingOrPlaying: Bool {
+        switch self {
+            case .pending:
+                return false
+            case .waitingToPlay:
+                return true
+            case .paused:
+                return false
+            case .playing:
+                return true
+            case .nothingToPlay:
+                return false
+        }
+    }
+}
+
+// MARK: -
 
 func print(_ items: Any...) {
     let newItems: [Any] = [String(format: "%.5f", Date().timeIntervalSince1970)] + items

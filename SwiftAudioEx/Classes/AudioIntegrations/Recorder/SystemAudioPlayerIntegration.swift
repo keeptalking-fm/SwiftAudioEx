@@ -110,9 +110,9 @@ public final class SystemAudioPlayerIntegration {
         
         switch player.state.playerState {
                 
-            case .loading, .idle:
+            case .pending, .nothingToPlay:
                 break
-            case .ready, .buffering, .paused:
+            case .waitingToPlay, .paused:
                 break
             case .playing:
                 updateNowPlayingPlaybackMetadata(onlyIfRateChanged: true)
@@ -124,11 +124,11 @@ public final class SystemAudioPlayerIntegration {
         // If the player is buffering (waitingToPlay), background execution is not automatically provided.
         // A background task gives time for some media to buffer and for playback to actually start.
         switch player.state.playerState {
-        case .loading, .ready, .buffering:
+        case .pending, .waitingToPlay:
             appLifecycle.startNewBackgroundTask()
         case .playing, .paused:
             appLifecycle.finishAllBackgroundTasks()
-        case .idle:
+        case .nothingToPlay:
             break
         }
     }
@@ -232,26 +232,12 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public var playingStatus: AudioPlayerPlayingStatus {
-        switch player.state.playerState {
-            
-        case .loading:
-            return .pending
-        case .ready:
-            return .paused
-        case .buffering:
-            return .waitingToPlay
-        case .paused:
-            return .paused
-        case .playing:
-            return .playing
-        case .idle:
-            return .nothingToPlay
-        }
+        player.state.playerState
     }
     
     public var isPlaying: Bool {
         switch player.state.playerState {
-        case .loading, .ready, .buffering:
+        case .pending, .waitingToPlay:
             return shouldBePlaying
         case .paused:
             // during interruptions the player gets paused automatically
@@ -263,18 +249,18 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
             return false
         case .playing:
             return true
-        case .idle:
+        case .nothingToPlay:
             return false
         }
     }
     
     public var timeStatus: AudioPlayerTimeStatus? {
         switch player.state.playerState {
-            case .loading:
+            case .pending:
                 return nil
-            case .ready, .buffering, .paused, .playing:
+            case .waitingToPlay, .paused, .playing:
                 return AudioPlayerTimeStatus(duration: player.state.duration, position: player.elapsed)
-            case .idle:
+            case .nothingToPlay:
                 return nil
         }
     }

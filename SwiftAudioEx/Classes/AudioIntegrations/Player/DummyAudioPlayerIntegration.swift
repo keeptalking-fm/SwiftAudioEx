@@ -22,7 +22,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
     public private(set) var timeStatus: AudioPlayerTimeStatus?
     
     public var isPlaying: Bool {
-        playingStatus == .playing
+        playingStatus.isBufferingOrPlaying
     }
 
     private var source: PlaybackQueueSource?
@@ -58,7 +58,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
         source = queue
         playingIndex = 0
         
-        if autoPlay.shouldAutoPlay(wasPlaying: playingStatus == .playing) {
+        if autoPlay.shouldAutoPlay(wasPlaying: isPlaying) {
             restartTimer()
         }
     }
@@ -69,7 +69,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func play() {
-        playingStatus = .playing
+        playingStatus = .playing(rate: 1)
         restartTimer()
     }
     
@@ -79,7 +79,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func togglePlayPause() {
-        if playingStatus == .playing {
+        if playingStatus.isBufferingOrPlaying {
             pause()
         } else {
             play()
@@ -106,7 +106,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
     // MARK: -
     
     private func restartTimer() {
-        guard playingStatus == .playing else {
+        guard playingStatus.isBufferingOrPlaying else {
             return
         }
         
