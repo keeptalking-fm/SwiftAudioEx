@@ -31,39 +31,33 @@ class AVQueuePlayerWrapper {
     private var avPlayer: AVQueuePlayer {
         willSet {
             observer.player = nil
+            timeObserver.player = nil
         }
-        didSet {
-            observer.player = avPlayer
-            observer.startObserving()
-        }
+
     }
     
     private let observer: AVPlayerObserver
-    private let playerTimeObserver: AVPlayerTimeObserver
+    private let timeObserver: AVPlayerTimeObserver
     private var items: [Item] = []
-
+    private var playWhenReadyOnce: Bool = false
+    
     weak var delegate: AVQueuePlayerWrapperDelegate?
     
     var timeEventFrequency: TimeEventFrequency = .everySecond {
         didSet {
-            playerTimeObserver.periodicObserverTimeInterval = timeEventFrequency.getTime()
+            timeObserver.periodicObserverTimeInterval = timeEventFrequency.getTime()
         }
     }
 
     init() {
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
-        playerTimeObserver = AVPlayerTimeObserver(periodicObserverTimeInterval: timeEventFrequency.getTime())
+        timeObserver = AVPlayerTimeObserver(periodicObserverTimeInterval: timeEventFrequency.getTime())
         
-        observer.player = avPlayer
         observer.delegate = self
-        observer.startObserving()
-        
-        playerTimeObserver.player = avPlayer
-        
-        playerTimeObserver.delegate = self
-        playerTimeObserver.registerForPeriodicTimeEvents()
-        playerTimeObserver.registerForBoundaryTimeEvents()
+        timeObserver.delegate = self
+
+        setupAVPlayerObservations()
     }
     
     var elapsed: Seconds {
@@ -107,7 +101,7 @@ class AVQueuePlayerWrapper {
         return item?.sourceItem
     }
     
-    func load(_ items: [AudioItem]) {
+    func load(_ items: [AudioItem], playWhenReady: Bool, forceRecreateAVPlayer: Bool) {
         print("LOAD")
         
         // When AVPlayerItem deallocates, it can sometimes freeze the main thread, if KVO observations are attached to it still.
@@ -116,6 +110,13 @@ class AVQueuePlayerWrapper {
 //        observer.player = nil
         
         pause()
+        
+        if avPlayer.status == .failed || forceRecreateAVPlayer {
+            avPlayer = AVQueuePlayer()
+            setupAVPlayerObservations()
+        }
+        
+        playWhenReadyOnce = playWhenReady
         
         self.items = items.map { Item(audioItem: $0) }
         // automaticallyLoadedAssetKeys is required here. Without it, the player will sometimes freeze the main thread forever
@@ -175,6 +176,15 @@ class AVQueuePlayerWrapper {
 //        }
     }
     
+    private func setupAVPlayerObservations() {
+        observer.player = avPlayer
+        observer.startObserving()
+        
+        timeObserver.player = avPlayer
+        timeObserver.registerForPeriodicTimeEvents()
+        timeObserver.registerForBoundaryTimeEvents()
+    }
+    
     func pause() {
         avPlayer.rate = 0.0
     }
@@ -232,6 +242,10 @@ extension AVQueuePlayerWrapper: AVPlayerObserverDelegate {
     
     func player(currentItemStatusDidChange status: AVPlayerItem.Status) {
         delegate?.stateDidChange(in: self)
+        if status == .readyToPlay && playWhenReadyOnce {
+            play()
+            playWhenReadyOnce = false
+        }
     }
     
     func player(currentItemDurationDidChange duration: CMTime?) {

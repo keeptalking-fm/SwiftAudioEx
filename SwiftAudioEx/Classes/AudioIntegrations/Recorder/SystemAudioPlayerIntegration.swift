@@ -45,6 +45,7 @@ public final class SystemAudioPlayerIntegration {
         
         setupRemoteCommands()
                 
+        // Uncomment in case of switching back to QueuedAudioPlayer
 //        player.event.stateChange.addListener(self, handleAudioPlayerStateChange)
 //        player.event.queueIndex.addListener(self, handleQueueIndexChange)
 //        player.event.secondElapse.addListener(self, handleSecondElapse)
@@ -311,7 +312,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
         if playWhenReady {
             activateAudioSessionForPlaying()
         }
-        player.load(audioItems)
+        player.load(audioItems, playWhenReady: playWhenReady, forceRecreateAVPlayer: forceRecreateAVPlayer)
 //        try? player.add(items: audioItems, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady) // throws only on invalid urls, so it's ok not to handle errors
     }
     
