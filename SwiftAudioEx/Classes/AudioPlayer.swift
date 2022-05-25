@@ -212,10 +212,6 @@ public class AudioPlayer: AVPlayerWrapperDelegate {
         event.stateChange.emit(data: state)
     }
     
-    func AVWrapper(didChangeEffectiveRate effectiveRate: Double, rate: Double) {
-        event.updateRealRate.emit(data: (effectiveRate, rate))
-    }
-    
     func AVWrapper(secondsElapsed seconds: Double) {
         event.secondElapse.emit(data: seconds)
     }

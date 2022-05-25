@@ -10,6 +10,7 @@ import AVFoundation
 import UIKit
 
 public protocol AudioItem {
+    var id: UUID { get }
     var sourceURL: URL { get }
 }
 

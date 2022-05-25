@@ -21,7 +21,6 @@ public enum PlaybackEndedReason: String {
 protocol AVPlayerWrapperDelegate: AnyObject {
     
     func AVWrapper(didChangeState state: AVPlayerWrapperState)
-    func AVWrapper(didChangeEffectiveRate effectiveRate: Double, rate: Double)
     func AVWrapper(secondsElapsed seconds: Double)
     func AVWrapper(failedWithError error: Error?)
     func AVWrapper(seekTo seconds: Int, didFinish: Bool)
@@ -355,10 +354,6 @@ extension AVPlayerWrapper: AVPlayerObserverDelegate {
             delegate?.AVWrapper(didUpdateDuration: duration.seconds)
         }
     }
-    
-    func player(currentItemEffectiveRateDidChange effectiveRate: Double, rate: Double) {
-        delegate?.AVWrapper(didChangeEffectiveRate: effectiveRate, rate: rate)
-    }
 }
 
 extension AVPlayerWrapper: AVPlayerTimeObserverDelegate {
@@ -392,13 +387,7 @@ extension AVPlayerWrapper: AVPlayerItemObserverDelegate {
     
     // MARK: - AVPlayerItemObserverDelegate
     
-    func item(didUpdateDuration duration: Double) {
-    }
-    
     func item(didReceiveMetadata metadata: [AVTimedMetadataGroup]) {
         delegate?.AVWrapper(didReceiveMetadata: metadata)
-    }
-     
-    func item(didUpdateEffectiveRate effectiveRate: Double, rate: Double) {
     }
 }

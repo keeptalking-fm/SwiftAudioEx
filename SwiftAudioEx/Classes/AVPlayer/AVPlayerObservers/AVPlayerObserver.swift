@@ -40,22 +40,16 @@ protocol AVPlayerObserverDelegate: AnyObject {
      Called when the AVPlayer.currentItem.duration changes.
      */
     func player(currentItemDurationDidChange duration: CMTime?)
-    
-    /**
-     Called when the AVPlayer.currentItem.timebase.effectiveRate changes.
-     */
-    func player(currentItemEffectiveRateDidChange effectiveRate: Double, rate: Double)
 }
 
 /**
  Observing an AVPlayers status changes.
  */
-class AVPlayerObserver: NSObject {
+class AVPlayerObserver {
 
     private(set) var isObserving: Bool = false
     
     private var keyPathObservations: [NSObjectProtocol] = []
-    private var effectiveRateObserver: AnyObject?
 
     weak var delegate: AVPlayerObserverDelegate?
     weak var player: AVPlayer? {
@@ -67,6 +61,10 @@ class AVPlayerObserver: NSObject {
     deinit {
         stopObserving()
     }
+    
+    init() {
+    }
+    
 
     /**
      Start receiving events from this observer.
@@ -101,18 +99,10 @@ class AVPlayerObserver: NSObject {
         player.observe(\.currentItem?.duration, options: [.new]) { [weak self] p, change in
             self?.delegate?.player(currentItemDurationDidChange: p.currentItem?.duration)
         }.store(in: &keyPathObservations)
-        
-        effectiveRateObserver =
-        NotificationCenter.default.addObserver(forName: Notification.Name(kCMTimebaseNotification_EffectiveRateChanged as String), object: nil, queue: .main) { [weak self] note in
-            guard let timebase = asCMTimebase(note.object), timebase == self?.player?.currentItem?.timebase else { return }
-            self?.delegate?.player(currentItemEffectiveRateDidChange: timebase.effectiveRate, rate: timebase.rate)
-        }
     }
 
     func stopObserving() {
         keyPathObservations = []
-        effectiveRateObserver.map ( NotificationCenter.default.removeObserver )
-        effectiveRateObserver = nil
         isObserving = false
     }
 }

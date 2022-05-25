@@ -23,7 +23,7 @@ public final class SystemAudioPlayerIntegration {
     
     private(set) var source: PlaybackQueueSource?
     
-    private let player: QueuedAudioPlayer
+    private let player: AVQueuePlayerWrapper
     
     private let audioSession: AudioSessionManager
     private let nowPlayingInfo: NowPlayingInfoController
@@ -35,21 +35,23 @@ public final class SystemAudioPlayerIntegration {
     private var shouldBePlaying = false
     
     public init() {
-        self.player = QueuedAudioPlayer()
+        self.player = AVQueuePlayerWrapper()
         self.audioSession = AudioSessionManager()
         self.nowPlayingInfo = NowPlayingInfoController()
         self.appLifecycle = AppLifecycleObserver()
         self.remoteCommandController = RemoteCommandController()
         
-        player.timeEventFrequency = .custom(time: updateFrequency)
+//        player.timeEventFrequency = .custom(time: updateFrequency)
         
         setupRemoteCommands()
                 
-        player.event.stateChange.addListener(self, handleAudioPlayerStateChange)
-        player.event.queueIndex.addListener(self, handleQueueIndexChange)
-        player.event.secondElapse.addListener(self, handleSecondElapse)
-        player.event.updateDuration.addListener(self, handleDurationChange)
-        player.event.updateRealRate.addListener(self, handleRateChange)
+//        player.event.stateChange.addListener(self, handleAudioPlayerStateChange)
+//        player.event.queueIndex.addListener(self, handleQueueIndexChange)
+//        player.event.secondElapse.addListener(self, handleSecondElapse)
+//        player.event.updateDuration.addListener(self, handleDurationChange)
+//        player.event.updateRealRate.addListener(self, handleRateChange)
+        
+        player.delegate = self
         
         audioSession.delegate = self
         appLifecycle.delegate = self
@@ -88,36 +90,34 @@ public final class SystemAudioPlayerIntegration {
     
     // MARK: -
     
-    private func handleAudioPlayerStateChange(state: AudioPlayerState) {
-        print("⏯ stateChange ->", state, player.currentTime, "/", player.duration)
+    private func handleAudioPlayerStateChange() {
+        print("⏯ stateChange ->", player.playerState, player.currentTime, "/", player.duration)
         checkBackgroundTasksOnStateChange()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all.subtracting(.playingItem), in: self)
     }
     
-    private func handleQueueIndexChange(data: AudioPlayer.QueueIndexEventData) {
-        print("⏯ queueIndex ->", data, player.currentTime, "/", player.duration, "state", player.playerState)
+    private func handleItemChange() {
+        print("⏯ itemChange ->", player.currentItem as Any, player.currentTime, "/", player.duration, "state", player.playerState)
         updateStaticNowPlayingMetadata()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all, in: self)
     }
     
-    private func handleSecondElapse(data: AudioPlayer.SecondElapseEventData) {
+    private func handleSecondElapse() {
         print("⏯ secondElapse ->", player.currentTime, "/", player.duration)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
-    private func handleDurationChange(data: AudioPlayer.UpdateDurationEventData) {
+    private func handleDurationChange() {
         print("⏯ updateDuration ->", player.currentTime, "/", player.duration)
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
-    func handleRateChange(data: AudioPlayer.UpdateRateEventData) {
-        // Don't think we need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
-        // if we were to update Now Playing info here, would need to filter on data.rate
-        // because data.effectiveRate changes very often, as it is extremely precise.
-        print("✅ rate \(data.rate) | effective rate: \(data.effectiveRate)", Thread.isMainThread)
+    func handleRateChange() {
+        // Mostly we don't need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
+        print("✅ rate \(player.realRate)")
         
         switch player.playerState {
                 
@@ -311,7 +311,8 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
         if playWhenReady {
             activateAudioSessionForPlaying()
         }
-        try? player.add(items: audioItems, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady) // throws only on invalid urls, so it's ok not to handle errors
+        player.load(audioItems)
+//        try? player.add(items: audioItems, forceRecreateAVPlayer: forceRecreateAVPlayer, playWhenReady: playWhenReady) // throws only on invalid urls, so it's ok not to handle errors
     }
     
     public func finishPlaying() {
@@ -354,16 +355,8 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func jumpToItemWithID(_ uuid: UUID) {
-        guard let matchingItem = player.items
-                .compactMap({ $0 as? PlaybackItem })
-                .enumerated()
-                .first(where: { $0.element.metadata.id == uuid })
-        else {
-            print("Can't jump to item \(uuid) - not in player queue")
-            return
-        }
         let playWhenReady = AutoPlayBehaviour.playIfAlreadyPlaying.shouldAutoPlay(wasPlaying: isPlaying)
-        try? player.jumpToItem(atIndex: matchingItem.offset, playWhenReady: playWhenReady)
+        try? player.jumpToItem(id: uuid, playWhenReady: playWhenReady)
     }
 }
 
@@ -374,5 +367,27 @@ extension PlaybackItem: AudioItem {
     public var sourceURL: URL {
         audioURL
     }
+    
+    public var id: UUID {
+        metadata.id
+    }
 }
 
+
+extension SystemAudioPlayerIntegration: AVQueuePlayerWrapperDelegate {
+    func stateDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleAudioPlayerStateChange()
+    }
+    
+    func rateDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleRateChange()
+    }
+    
+    func currentItemDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleItemChange()
+    }
+    
+    func timeDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleDurationChange()
+    }
+}
