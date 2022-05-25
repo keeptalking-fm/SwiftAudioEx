@@ -92,35 +92,23 @@ public final class SystemAudioPlayerIntegration {
     // MARK: -
     
     private func handleAudioPlayerStateChange() {
-        print("⏯ stateChange ->", player.playerState, player.elapsed, "/", player.duration)
+        print("⏯ stateChange ->", player.state, player.elapsed, "/", player.state.duration)
         checkBackgroundTasksOnStateChange()
-        updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
-        delegate?.stateDidChange(.all.subtracting(.playingItem), in: self)
-    }
-    
-    private func handleItemChange() {
-        print("⏯ itemChange ->", player.currentItem as Any, player.elapsed, "/", player.duration, "state", player.playerState)
         updateStaticNowPlayingMetadata()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all, in: self)
     }
     
     private func handleSecondElapse() {
-        print("⏯ secondElapse ->", player.elapsed, "/", player.duration)
-        delegate?.stateDidChange([.timeStatus], in: self)
-    }
-    
-    private func handleDurationChange() {
-        print("⏯ updateDuration ->", player.elapsed, "/", player.duration)
-        updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
+        print("⏯ secondElapse ->", player.elapsed, "/", player.state.duration)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
     func handleRateChange() {
         // Mostly we don't need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
-        print("✅ rate \(player.playerState)")
+        print("✅ rate \(player.state)")
         
-        switch player.playerState {
+        switch player.state.playerState {
                 
             case .loading, .idle:
                 break
@@ -135,7 +123,7 @@ public final class SystemAudioPlayerIntegration {
     private func checkBackgroundTasksOnStateChange() {
         // If the player is buffering (waitingToPlay), background execution is not automatically provided.
         // A background task gives time for some media to buffer and for playback to actually start.
-        switch player.playerState {
+        switch player.state.playerState {
         case .loading, .ready, .buffering:
             appLifecycle.startNewBackgroundTask()
         case .playing, .paused:
@@ -146,7 +134,7 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func updateNowPlayingPlaybackMetadata(onlyIfRateChanged: Bool) {
-        let metadata = NowPlayableDynamicMetadata(rate: player.playerState.rate,
+        let metadata = NowPlayableDynamicMetadata(rate: player.state.playerState.rate,
                                                   position: Float(timeStatus?.position ?? 0),
                                                   duration: Float(timeStatus?.duration ?? 0))
         
@@ -154,7 +142,7 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func updateStaticNowPlayingMetadata() {
-        guard let playingItem = player.currentItem as? PlaybackItem else { return }
+        guard let playingItem = player.state.currentItem as? PlaybackItem else { return }
         
         let metadata = NowPlayableStaticMetadata(assetURL: playingItem.audioURL,
                                                  mediaType: .audio, // podcast?
@@ -240,11 +228,11 @@ extension SystemAudioPlayerIntegration: AppLifecycleObserverDelegate {
 extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     
     public var playingItem: PlaybackItem? {
-        return player.currentItem as? PlaybackItem
+        return player.state.currentItem as? PlaybackItem
     }
     
     public var playingStatus: AudioPlayerPlayingStatus {
-        switch player.playerState {
+        switch player.state.playerState {
             
         case .loading:
             return .pending
@@ -262,7 +250,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public var isPlaying: Bool {
-        switch player.playerState {
+        switch player.state.playerState {
         case .loading, .ready, .buffering:
             return shouldBePlaying
         case .paused:
@@ -281,13 +269,13 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public var timeStatus: AudioPlayerTimeStatus? {
-        switch player.playerState {
-        case .loading:
-            return nil
-        case .ready, .buffering, .paused, .playing:
-            return AudioPlayerTimeStatus(duration: player.duration, position: player.elapsed)
-        case .idle:
-            return nil
+        switch player.state.playerState {
+            case .loading:
+                return nil
+            case .ready, .buffering, .paused, .playing:
+                return AudioPlayerTimeStatus(duration: player.state.duration, position: player.elapsed)
+            case .idle:
+                return nil
         }
     }
     
@@ -376,23 +364,12 @@ extension PlaybackItem: AudioItem {
 
 
 extension SystemAudioPlayerIntegration: AVQueuePlayerWrapperDelegate {
-    func stateDidChange(in wrapper: AVQueuePlayerWrapper) {
-        handleAudioPlayerStateChange()
-    }
-    
-    func rateDidChange(in wrapper: AVQueuePlayerWrapper) {
-        handleRateChange()
-    }
-    
-    func currentItemDidChange(in wrapper: AVQueuePlayerWrapper) {
-        handleItemChange()
-    }
-    
-    func durationDidChange(in wrapper: AVQueuePlayerWrapper) {
-        handleDurationChange()
-    }
     
     func elapsedDidChange(in wrapper: AVQueuePlayerWrapper) {
         handleSecondElapse()
+    }
+    
+    func newStateDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleAudioPlayerStateChange()
     }
 }

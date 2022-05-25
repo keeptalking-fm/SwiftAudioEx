@@ -15,7 +15,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
     
     public private(set) var playingStatus: AudioPlayerPlayingStatus = .paused {
         didSet {
-            delegate?.stateDidChange([.playingStatus], in: self)
+            delegate?.stateDidChange(.state, in: self)
         }
     }
     
@@ -31,7 +31,7 @@ public final class DummyAudioPlayerIntegration: AudioPlayerIntegration {
         didSet {
             playingItem = playingIndex.flatMap { source?.items[wrapping: $0] }
             timeStatus = AudioPlayerTimeStatus(duration: 3, position: 0)
-            delegate?.stateDidChange([.playingItem, .timeStatus], in: self)
+            delegate?.stateDidChange(.all, in: self)
         }
     }
     

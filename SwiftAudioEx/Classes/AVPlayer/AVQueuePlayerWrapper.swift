@@ -9,15 +9,22 @@ import Foundation
 import AVFoundation
 
 protocol AVQueuePlayerWrapperDelegate: AnyObject {
-    func stateDidChange(in wrapper: AVQueuePlayerWrapper)
-    func rateDidChange(in wrapper: AVQueuePlayerWrapper)
-    func currentItemDidChange(in wrapper: AVQueuePlayerWrapper)
-    func durationDidChange(in wrapper: AVQueuePlayerWrapper)
     func elapsedDidChange(in wrapper: AVQueuePlayerWrapper)
+    func newStateDidChange(in wrapper: AVQueuePlayerWrapper)
 }
 
 class AVQueuePlayerWrapper {
 
+    struct State: Equatable {
+        var currentItem: AudioItem?
+        var playerState: AVPlayerWrapperState = .idle
+        var duration: Seconds
+        
+        static func == (lhs: AVQueuePlayerWrapper.State, rhs: AVQueuePlayerWrapper.State) -> Bool {
+            return lhs.playerState == rhs.playerState && lhs.currentItem?.id == rhs.currentItem?.id && lhs.duration == rhs.duration
+        }
+    }
+    
     private class Item {
         let sourceItem: AudioItem
         let asset: AVURLAsset
@@ -33,8 +40,10 @@ class AVQueuePlayerWrapper {
             observer.player = nil
             timeObserver.player = nil
         }
-
     }
+    
+    
+    
     
     private let observer: AVPlayerObserver
     private let timeObserver: AVPlayerTimeObserver
@@ -43,6 +52,8 @@ class AVQueuePlayerWrapper {
     
     weak var delegate: AVQueuePlayerWrapperDelegate?
     
+    private(set) var state: State
+    
     var timeEventFrequency: TimeEventFrequency = .everySecond {
         didSet {
             timeObserver.periodicObserverTimeInterval = timeEventFrequency.getTime()
@@ -50,6 +61,8 @@ class AVQueuePlayerWrapper {
     }
 
     init() {
+        state = State(currentItem: nil, playerState: .idle, duration: 0)
+        
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
         timeObserver = AVPlayerTimeObserver(periodicObserverTimeInterval: timeEventFrequency.getTime())
@@ -65,42 +78,61 @@ class AVQueuePlayerWrapper {
         return seconds.isNaN ? 0 : seconds
     }
     
-    var duration: Seconds {
-        if let seconds = avPlayer.currentItem?.duration.seconds, !seconds.isNaN {
-            return seconds
+    // MARK: - State -
+
+    private func recalcState() {
+        // Many KVO properties change at once.
+        // To avoid too many callbacks (resulting in jumpy Now Playing info since it updates async)
+        // making sure multiple callbacks are not called for partial changes
+        // (hence always recalculating from actual state and not looking at which part changed in KVO)
+        
+        let currentItem: AudioItem?
+        if let playingItem = avPlayer.currentItem,
+           let item = items.first(where: { $0.asset === playingItem.asset })
+        {
+            currentItem = item.sourceItem
+        } else {
+            currentItem = nil
         }
-        return 0.0
-    }
-    
-    var playerState: AVPlayerWrapperState {
+        
+        let playerState: AVPlayerWrapperState
         switch avPlayer.status {
             case .unknown:
-                return .idle
+                playerState = avPlayer.currentItem == nil ? .idle : .loading
             case .readyToPlay:
                 switch avPlayer.timeControlStatus {
                     case .paused:
-                        return .paused
+                        playerState = avPlayer.currentItem == nil ? .idle : .paused
                     case .waitingToPlayAtSpecifiedRate:
-                        return .buffering
+                        playerState = avPlayer.currentItem == nil ? .idle : .buffering
                     case .playing:
-                        return .playing(rate: avPlayer.rate)
+                        playerState = .playing(rate: avPlayer.rate)
                     @unknown default:
-                        return .paused
+                        playerState = .paused
                 }
             case .failed:
-                return .loading
+                playerState = .loading
             @unknown default:
-                return .idle
+                playerState = .idle
+        }
+        
+        let duration: Seconds
+        if let seconds = avPlayer.currentItem?.duration.seconds, !seconds.isNaN {
+            duration = seconds
+        } else {
+            duration = 0
+        }
+        
+        let prevState = state
+        let newState = State(currentItem: currentItem, playerState: playerState, duration: duration)
+        if prevState != newState {
+            state = newState
+            delegate?.newStateDidChange(in: self)
         }
     }
     
-    var currentItem: AudioItem? {
-        guard let currentItem = avPlayer.currentItem else { return nil }
-        
-        let item = items.first(where: { $0.asset === currentItem.asset })
-        return item?.sourceItem
-    }
-    
+    // MARK: - API -
+
     func load(_ items: [AudioItem], playWhenReady: Bool, forceRecreateAVPlayer: Bool) {
         print("LOAD")
         
@@ -214,25 +246,24 @@ class AVQueuePlayerWrapper {
 
 extension AVQueuePlayerWrapper: AVPlayerObserverDelegate {
     func player(statusDidChange status: AVPlayer.Status) {
-//        print(status, status.rawValue)
-        delegate?.stateDidChange(in: self)
+        recalcState()
     }
     
     func player(didChangeTimeControlStatus status: AVPlayer.TimeControlStatus) {
-//        print(status, status.rawValue)
-        delegate?.stateDidChange(in: self)
+        recalcState()
     }
     
     func player(didChangeRate rate: Float) {
-        delegate?.rateDidChange(in: self)
+        recalcState()
     }
     
     func player(currentItemDidChange item: AVPlayerItem?) {
-        delegate?.currentItemDidChange(in: self)
+        recalcState()
     }
     
     func player(currentItemStatusDidChange status: AVPlayerItem.Status) {
-        delegate?.stateDidChange(in: self)
+        recalcState()
+
         if status == .readyToPlay && playWhenReadyOnce {
             play()
             playWhenReadyOnce = false
@@ -240,7 +271,7 @@ extension AVQueuePlayerWrapper: AVPlayerObserverDelegate {
     }
     
     func player(currentItemDurationDidChange duration: CMTime?) {
-        delegate?.durationDidChange(in: self)
+        recalcState()
     }
 }
 

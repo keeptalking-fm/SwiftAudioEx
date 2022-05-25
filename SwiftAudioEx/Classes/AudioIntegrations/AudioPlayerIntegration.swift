@@ -52,11 +52,10 @@ public struct AudioPlayerStateChange: OptionSet {
         self.rawValue = rawValue
     }
     
-    public static let playingItem = AudioPlayerStateChange(rawValue: 1 << 0)
-    public static let playingStatus = AudioPlayerStateChange(rawValue: 1 << 1)
+    public static let state = AudioPlayerStateChange(rawValue: 1 << 0)
     public static let timeStatus = AudioPlayerStateChange(rawValue: 1 << 2)
     
-    public static let all: AudioPlayerStateChange = [.playingItem, .playingStatus, .timeStatus]
+    public static let all: AudioPlayerStateChange = [.state, .timeStatus]
 }
 
 public enum AudioPlayerPlayingStatus {
