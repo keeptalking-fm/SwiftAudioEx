@@ -11,6 +11,7 @@ import AVFoundation
 protocol AVQueuePlayerWrapperDelegate: AnyObject {
     func elapsedDidChange(in wrapper: AVQueuePlayerWrapper)
     func newStateDidChange(in wrapper: AVQueuePlayerWrapper)
+    func queueFinished(in wrapper: AVQueuePlayerWrapper)
 }
 
 class AVQueuePlayerWrapper {
@@ -54,6 +55,7 @@ class AVQueuePlayerWrapper {
     private let timeObserver: AVPlayerTimeObserver
     private var items: [Item] = []
     private var playWhenReadyOnce: Bool = false
+    private var stopped: Bool = false
     
     weak var delegate: AVQueuePlayerWrapperDelegate?
     
@@ -66,7 +68,7 @@ class AVQueuePlayerWrapper {
     }
 
     init() {
-        state = State(currentAudioItem: nil, playerState: .nothingToPlay, duration: 0)
+        state = State(duration: 0)
         
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
@@ -134,6 +136,10 @@ class AVQueuePlayerWrapper {
         if prevState != newState {
             state = newState
             delegate?.newStateDidChange(in: self)
+            
+            if !stopped, prevState.currentAudioItem != nil && newState.currentAudioItem == nil {
+                delegate?.queueFinished(in: self)
+            }
         }
     }
     
@@ -141,6 +147,7 @@ class AVQueuePlayerWrapper {
 
     func load(_ items: [AudioItem], playWhenReady: Bool, forceRecreateAVPlayer: Bool) {
         print("LOAD")
+        stopped = false
         
         // When AVPlayerItem deallocates, it can sometimes freeze the main thread, if KVO observations are attached to it still.
         // Stop observing to let the stuff deallocate, and restart observation below.
@@ -232,6 +239,7 @@ class AVQueuePlayerWrapper {
     }
     
     func stop() {
+        stopped = true
         pause()
         avPlayer.removeAllItems()
     }

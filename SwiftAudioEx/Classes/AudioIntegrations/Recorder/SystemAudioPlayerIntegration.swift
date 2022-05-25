@@ -358,4 +358,8 @@ extension SystemAudioPlayerIntegration: AVQueuePlayerWrapperDelegate {
     func newStateDidChange(in wrapper: AVQueuePlayerWrapper) {
         handleAudioPlayerStateChange()
     }
+    
+    func queueFinished(in wrapper: AVQueuePlayerWrapper) {
+        delegate?.didFinishPlaying(in: self)
+    }
 }

@@ -12,6 +12,8 @@ public typealias Seconds = TimeInterval
 public protocol AudioPlayerIntegrationDelegate: AnyObject {
     /// Multiple things can change at once.
     func stateDidChange(_ stateChanges: AudioPlayerStateChange, in audioIntegration: AudioPlayerIntegration)
+    
+    func didFinishPlaying(in audioIntegration: AudioPlayerIntegration)
 }
 
 /// Describes the interface of the system audio playback.
