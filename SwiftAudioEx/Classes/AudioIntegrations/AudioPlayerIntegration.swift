@@ -74,7 +74,7 @@ public struct AudioPlayerTimeStatus: Equatable {
     
     init(duration: Seconds, position: Seconds) {
         self.duration = duration
-        self.position = min(position, duration)
+        self.position = max(0, min(position, duration))
     }
 }
 

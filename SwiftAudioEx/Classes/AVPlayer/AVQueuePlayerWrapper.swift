@@ -12,12 +12,13 @@ protocol AVQueuePlayerWrapperDelegate: AnyObject {
     func stateDidChange(in wrapper: AVQueuePlayerWrapper)
     func rateDidChange(in wrapper: AVQueuePlayerWrapper)
     func currentItemDidChange(in wrapper: AVQueuePlayerWrapper)
-    func timeDidChange(in wrapper: AVQueuePlayerWrapper)
+    func durationDidChange(in wrapper: AVQueuePlayerWrapper)
+    func elapsedDidChange(in wrapper: AVQueuePlayerWrapper)
 }
 
 class AVQueuePlayerWrapper {
 
-    class Item {
+    private class Item {
         let sourceItem: AudioItem
         let asset: AVURLAsset
         
@@ -27,7 +28,7 @@ class AVQueuePlayerWrapper {
         }
     }
     
-    private var avPlayer: AVQueuePlayer? {
+    private var avPlayer: AVQueuePlayer {
         willSet {
             observer.player = nil
         }
@@ -36,36 +37,48 @@ class AVQueuePlayerWrapper {
             observer.startObserving()
         }
     }
-    let observer: AVPlayerObserver
     
+    private let observer: AVPlayerObserver
+    private let playerTimeObserver: AVPlayerTimeObserver
+    private var items: [Item] = []
+
     weak var delegate: AVQueuePlayerWrapperDelegate?
     
-    private(set) var items: [Item] = []
-    
+    var timeEventFrequency: TimeEventFrequency = .everySecond {
+        didSet {
+            playerTimeObserver.periodicObserverTimeInterval = timeEventFrequency.getTime()
+        }
+    }
+
     init() {
         avPlayer = AVQueuePlayer()
         observer = AVPlayerObserver()
+        playerTimeObserver = AVPlayerTimeObserver(periodicObserverTimeInterval: timeEventFrequency.getTime())
         
         observer.player = avPlayer
         observer.delegate = self
         observer.startObserving()
+        
+        playerTimeObserver.player = avPlayer
+        
+        playerTimeObserver.delegate = self
+        playerTimeObserver.registerForPeriodicTimeEvents()
+        playerTimeObserver.registerForBoundaryTimeEvents()
     }
     
-    var currentTime: Seconds {
-        guard let seconds = avPlayer?.currentTime().seconds else { return 0 }
+    var elapsed: Seconds {
+        let seconds = avPlayer.currentTime().seconds
         return seconds.isNaN ? 0 : seconds
     }
     
     var duration: Seconds {
-        if let seconds = avPlayer?.currentItem?.duration.seconds, !seconds.isNaN {
+        if let seconds = avPlayer.currentItem?.duration.seconds, !seconds.isNaN {
             return seconds
         }
         return 0.0
     }
     
     var playerState: AVPlayerWrapperState {
-        guard let avPlayer = avPlayer else { return .idle }
-
         switch avPlayer.status {
             case .unknown:
                 return .idle
@@ -88,7 +101,7 @@ class AVQueuePlayerWrapper {
     }
     
     var currentItem: AudioItem? {
-        guard let currentItem = avPlayer?.currentItem else { return nil }
+        guard let currentItem = avPlayer.currentItem else { return nil }
         
         let item = items.first(where: { $0.asset === currentItem.asset })
         return item?.sourceItem
@@ -111,11 +124,10 @@ class AVQueuePlayerWrapper {
 //        self.observer.player = self.avPlayer
 //        self.observer.startObserving()
         
-        
-        self.avPlayer?.removeAllItems()
+        self.avPlayer.removeAllItems()
         for playerItems in playerItems {
-            if self.avPlayer?.canInsert(playerItems, after: nil) == true {
-                self.avPlayer?.insert(playerItems, after: nil)
+            if self.avPlayer.canInsert(playerItems, after: nil) {
+                self.avPlayer.insert(playerItems, after: nil)
             }
         }
         
@@ -164,20 +176,20 @@ class AVQueuePlayerWrapper {
     }
     
     func pause() {
-        avPlayer?.rate = 0.0
+        avPlayer.rate = 0.0
     }
     
     func play() {
-        avPlayer?.rate = 1.0
+        avPlayer.rate = 1.0
     }
     
     func stop() {
         pause()
-        avPlayer?.removeAllItems()
+        avPlayer.removeAllItems()
     }
     
     func next() {
-        avPlayer?.advanceToNextItem()
+        avPlayer.advanceToNextItem()
     }
     
     func previous() {
@@ -194,7 +206,7 @@ class AVQueuePlayerWrapper {
             case .idle, .loading, .ready, .buffering, .paused:
                 return 0.0
             case .playing:
-                return avPlayer?.rate ?? 0.0
+                return avPlayer.rate
         }
     }
 }
@@ -223,12 +235,22 @@ extension AVQueuePlayerWrapper: AVPlayerObserverDelegate {
     }
     
     func player(currentItemDurationDidChange duration: CMTime?) {
-        delegate?.timeDidChange(in: self)
+        delegate?.durationDidChange(in: self)
+    }
+}
+
+extension AVQueuePlayerWrapper: AVPlayerTimeObserverDelegate {
+    func audioDidStart() {
+        print("audioDidStart")
+    }
+    
+    func timeEvent(time: CMTime) {
+        delegate?.elapsedDidChange(in: self)
     }
 }
 
 func print(_ items: Any...) {
-    let newItems: [Any] = [Date().timeIntervalSince1970] + items
+    let newItems: [Any] = [String(format: "%.5f", Date().timeIntervalSince1970)] + items
     for item in newItems {
         Swift.print(item, terminator: " ")
     }

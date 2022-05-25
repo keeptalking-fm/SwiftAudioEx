@@ -41,7 +41,7 @@ public final class SystemAudioPlayerIntegration {
         self.appLifecycle = AppLifecycleObserver()
         self.remoteCommandController = RemoteCommandController()
         
-//        player.timeEventFrequency = .custom(time: updateFrequency)
+        player.timeEventFrequency = .custom(time: updateFrequency)
         
         setupRemoteCommands()
                 
@@ -91,26 +91,26 @@ public final class SystemAudioPlayerIntegration {
     // MARK: -
     
     private func handleAudioPlayerStateChange() {
-        print("⏯ stateChange ->", player.playerState, player.currentTime, "/", player.duration)
+        print("⏯ stateChange ->", player.playerState, player.elapsed, "/", player.duration)
         checkBackgroundTasksOnStateChange()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all.subtracting(.playingItem), in: self)
     }
     
     private func handleItemChange() {
-        print("⏯ itemChange ->", player.currentItem as Any, player.currentTime, "/", player.duration, "state", player.playerState)
+        print("⏯ itemChange ->", player.currentItem as Any, player.elapsed, "/", player.duration, "state", player.playerState)
         updateStaticNowPlayingMetadata()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange(.all, in: self)
     }
     
     private func handleSecondElapse() {
-        print("⏯ secondElapse ->", player.currentTime, "/", player.duration)
+        print("⏯ secondElapse ->", player.elapsed, "/", player.duration)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
     private func handleDurationChange() {
-        print("⏯ updateDuration ->", player.currentTime, "/", player.duration)
+        print("⏯ updateDuration ->", player.elapsed, "/", player.duration)
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
@@ -284,7 +284,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
         case .loading:
             return nil
         case .ready, .buffering, .paused, .playing:
-            return AudioPlayerTimeStatus(duration: player.duration, position: player.currentTime)
+            return AudioPlayerTimeStatus(duration: player.duration, position: player.elapsed)
         case .idle:
             return nil
         }
@@ -387,7 +387,11 @@ extension SystemAudioPlayerIntegration: AVQueuePlayerWrapperDelegate {
         handleItemChange()
     }
     
-    func timeDidChange(in wrapper: AVQueuePlayerWrapper) {
+    func durationDidChange(in wrapper: AVQueuePlayerWrapper) {
         handleDurationChange()
+    }
+    
+    func elapsedDidChange(in wrapper: AVQueuePlayerWrapper) {
+        handleSecondElapse()
     }
 }
