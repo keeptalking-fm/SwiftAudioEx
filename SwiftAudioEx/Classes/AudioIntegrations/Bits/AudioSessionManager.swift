@@ -87,7 +87,12 @@ class AudioSessionManager {
 
 extension AudioSessionManager {
     
-    func activateForPlayingAndRecording() throws {
-        try activate(category: .playAndRecord, mode: .spokenAudio, categoryOptions: [])
+    func activateForPlaying() throws {
+        try activate(category: .playback, mode: .spokenAudio, categoryOptions: [])
     }
+
+    func activateForRecording() throws {
+        try activate(category: .record, mode: .spokenAudio, categoryOptions: [])
+    }
+
 }

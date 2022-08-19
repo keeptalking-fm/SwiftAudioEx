@@ -75,7 +75,7 @@ public final class SystemAudioPlayerIntegration {
     
     private func activateAudioSessionForPlaying() {
         do {
-            try audioSession.activateForPlayingAndRecording()
+            try audioSession.activateForPlaying()
         } catch {
             print("Error activating audio session: \(error)")
         }

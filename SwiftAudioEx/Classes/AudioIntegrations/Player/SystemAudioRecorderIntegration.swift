@@ -99,7 +99,7 @@ public final class SystemAudioRecorderIntegration: NSObject, AudioRecorderIntegr
         }
         
         do {
-            try audioSession.activateForPlayingAndRecording()
+            try audioSession.activateForRecording()
         } catch {
             invalidateRecorder(error: .cantActivateAudioSession)
         }
