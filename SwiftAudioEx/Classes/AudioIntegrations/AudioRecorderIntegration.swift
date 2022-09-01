@@ -60,7 +60,7 @@ public struct AudioRecorderStateChange: OptionSet {
 
 // MARK: -
 
-public struct RecordingItem {
+public struct RecordingItem: Equatable {
     public var fileID: UUID = UUID()
     public var directory: URL
     public var metadata: Metadata
@@ -74,7 +74,7 @@ public struct RecordingItem {
 
 public extension RecordingItem {
     
-    struct Metadata {
+    struct Metadata: Equatable {
         public var conversationID: UUID
         
         public init(conversationID: UUID) {
@@ -83,7 +83,7 @@ public extension RecordingItem {
     }
 }
 
-public struct RecordedFile {
+public struct RecordedFile: Equatable {
     public var fileURL: URL
     public var duration: Double
 }
