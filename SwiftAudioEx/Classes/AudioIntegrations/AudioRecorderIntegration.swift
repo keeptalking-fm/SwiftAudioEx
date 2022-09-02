@@ -75,10 +75,10 @@ public struct RecordingItem: Equatable {
 public extension RecordingItem {
     
     struct Metadata: Equatable {
-        public var conversationID: UUID
+        public var convoID: UUID
         
-        public init(conversationID: UUID) {
-            self.conversationID = conversationID
+        public init(convoID: UUID) {
+            self.convoID = convoID
         }
     }
 }
