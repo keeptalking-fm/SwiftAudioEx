@@ -108,15 +108,8 @@ public final class SystemAudioPlayerIntegration {
         // Mostly we don't need to react here, because rate changes are accompanied by changes in player.playerState (buffering, playing, paused).
         print("✅ rate \(player.state)")
         
-        switch player.state.playerState {
-                
-            case .pending, .nothingToPlay:
-                break
-            case .waitingToPlay, .paused:
-                break
-            case .playing:
-                updateNowPlayingPlaybackMetadata(onlyIfRateChanged: true)
-                break
+        if case .playing = player.state.playerState {
+            updateNowPlayingPlaybackMetadata(onlyIfRateChanged: true)
         }
     }
     
