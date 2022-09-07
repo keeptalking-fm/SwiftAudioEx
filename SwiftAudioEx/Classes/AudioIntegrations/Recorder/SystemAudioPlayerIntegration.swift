@@ -57,9 +57,9 @@ public final class SystemAudioPlayerIntegration {
         audioSession.delegate = self
         appLifecycle.delegate = self
         
-        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { t in
-            print("alive")
-        }
+//        Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { t in
+//            print("alive")
+//        }
     }
     
     private func setupRemoteCommands() {
@@ -92,7 +92,7 @@ public final class SystemAudioPlayerIntegration {
     // MARK: -
     
     private func handleAudioPlayerStateChange() {
-        print("⏯ stateChange ->", player.state, player.elapsed, "/", player.state.duration)
+//        print("⏯ stateChange ->", player.state, player.elapsed, "/", player.state.duration)
         checkBackgroundTasksOnStateChange()
         updateStaticNowPlayingMetadata()
         updateNowPlayingPlaybackMetadata(onlyIfRateChanged: false)
@@ -100,7 +100,7 @@ public final class SystemAudioPlayerIntegration {
     }
     
     private func handleSecondElapse() {
-        print("⏯ secondElapse ->", player.elapsed, "/", player.state.duration)
+//        print("⏯ secondElapse ->", player.elapsed, "/", player.state.duration)
         delegate?.stateDidChange([.timeStatus], in: self)
     }
     
@@ -284,7 +284,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func finishPlaying() {
-        print("FINISH PLAYING")
+        print("System audio: FINISH PLAYING")
 
         shouldBePlaying = false
         player.stop()
@@ -292,7 +292,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
     
     public func play() {
-        print("PLAY")
+        print("System audio: PLAY")
 
         shouldBePlaying = true
         activateAudioSessionForPlaying()
@@ -300,7 +300,7 @@ extension SystemAudioPlayerIntegration: AudioPlayerIntegration {
     }
         
     public func pause() {
-        print("PAUSE")
+        print("System audio: PAUSE")
 
         shouldBePlaying = false
         player.pause()

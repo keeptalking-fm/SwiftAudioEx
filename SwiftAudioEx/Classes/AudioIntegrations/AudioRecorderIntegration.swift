@@ -20,9 +20,7 @@ public struct AudioRecorderTimeStatus: Equatable {
         max(0, acceptedDurations.upperBound - elapsed)
     }
     
-    public static var zero: AudioRecorderTimeStatus {
-        .init(acceptedDurations: 0...0, elapsed: 0)
-    }
+    public static let zero: AudioRecorderTimeStatus = .init(acceptedDurations: 0...0, elapsed: 0)
 }
 
 public enum AudioRecorderStatus {
@@ -61,7 +59,7 @@ public struct AudioRecorderStateChange: OptionSet {
 // MARK: -
 
 public struct RecordingItem: Equatable {
-    public var fileID: UUID = UUID()
+    public var fileID: UUID
     public var directory: URL
     public var metadata: Metadata
     
