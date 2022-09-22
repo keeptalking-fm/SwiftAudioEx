@@ -21,7 +21,16 @@ public final class SystemAudioPlayerIntegration {
     
     public weak var delegate: AudioPlayerIntegrationDelegate?
     
-    private(set) var source: PlaybackQueueSource?
+    private(set) var source: PlaybackQueueSource? {
+        didSet {
+            print("XXX: SOURCE CHANGE")
+            if let source {
+                for item in source.items {
+                    print("\(item.metadata.authorName) \(item.id == item.metadata.id ? "-" : "*") \(item.id)")
+                }
+            }
+        }
+    }
     
     private let player: AVQueuePlayerWrapper
     

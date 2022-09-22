@@ -15,10 +15,7 @@ public struct PlaybackItem {
         self.metadata = metadata
         self.audioURL = audioURL
     }
-}
 
-extension PlaybackItem {
-    
     public struct Metadata {
         public var id: UUID
         public var authorName: String
@@ -40,10 +37,7 @@ public struct PlaybackQueueSource {
         self.metadata = metadata
         self.items = items
     }
-}
 
-extension PlaybackQueueSource {
-    
     public struct Metadata {
         public var id: UUID
         public var title: String
