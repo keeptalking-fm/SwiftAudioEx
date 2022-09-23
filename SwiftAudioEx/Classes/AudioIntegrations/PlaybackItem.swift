@@ -7,6 +7,26 @@
 
 import Foundation
 
+public struct PlaybackQueueSource {
+    public var metadata: Metadata
+    public var items: [PlaybackItem]
+    
+    public init(metadata: PlaybackQueueSource.Metadata, items: [PlaybackItem]) {
+        self.metadata = metadata
+        self.items = items
+    }
+
+    public struct Metadata {
+        public var id: UUID
+        public var title: String
+        
+        public init(id: UUID, title: String) {
+            self.id = id
+            self.title = title
+        }
+    }
+}
+
 public struct PlaybackItem {
     public var metadata: PlaybackItem.Metadata
     public var audioURL: URL
@@ -25,26 +45,6 @@ public struct PlaybackItem {
             self.id = id
             self.authorName = authorName
             self.albumTitle = albumTitle
-        }
-    }
-}
-
-public struct PlaybackQueueSource {
-    public var metadata: Metadata
-    public var items: [PlaybackItem]
-    
-    public init(metadata: PlaybackQueueSource.Metadata, items: [PlaybackItem]) {
-        self.metadata = metadata
-        self.items = items
-    }
-
-    public struct Metadata {
-        public var id: UUID
-        public var title: String
-        
-        public init(id: UUID, title: String) {
-            self.id = id
-            self.title = title
         }
     }
 }

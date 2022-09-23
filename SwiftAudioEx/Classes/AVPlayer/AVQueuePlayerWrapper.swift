@@ -165,7 +165,7 @@ class AVQueuePlayerWrapper {
         
         self.items = items.map { Item(audioItem: $0) }
         // automaticallyLoadedAssetKeys is required here. Without it, the player will sometimes freeze the main thread forever
-        let playerItems = self.items.map({ $0.makeAVPlayerItem() })
+        let playerItems = self.items.map { $0.makeAVPlayerItem() }
         
 //        self.observer.player = self.avPlayer
 //        self.observer.startObserving()

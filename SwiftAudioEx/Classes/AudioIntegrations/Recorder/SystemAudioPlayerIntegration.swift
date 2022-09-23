@@ -23,7 +23,7 @@ public final class SystemAudioPlayerIntegration {
     
     private(set) var source: PlaybackQueueSource? {
         didSet {
-            print("XXX: SOURCE CHANGE")
+            print("XXX: SOURCE CHANGE \(source?.items.count ?? -1)")
             if let source {
                 for item in source.items {
                     print("\(item.metadata.authorName) \(item.id == item.metadata.id ? "-" : "*") \(item.id)")
