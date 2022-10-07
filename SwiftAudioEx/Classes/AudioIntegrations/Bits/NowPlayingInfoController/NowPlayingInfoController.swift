@@ -19,7 +19,7 @@ extension NowPlayingInfoController {
         let nowPlayingInfoCenter = MPNowPlayingInfoCenter.default()
         var nowPlayingInfo: [String: Any] = [:]
         
-        print("📱 Set track metadata: title \(metadata.title)")
+        print("📱 Set track meta: title \(metadata.title)")
         nowPlayingInfo[MPNowPlayingInfoPropertyAssetURL] = metadata.assetURL
         nowPlayingInfo[MPNowPlayingInfoPropertyMediaType] = metadata.mediaType.rawValue
         nowPlayingInfo[MPMediaItemPropertyMediaType] = MPMediaType.podcast.rawValue
