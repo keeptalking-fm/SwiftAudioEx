@@ -60,7 +60,7 @@ public struct AudioPlayerStateChange: OptionSet {
     public static let all: AudioPlayerStateChange = [.state, .timeStatus]
 }
 
-public enum AudioPlayerPlayingStatus: Equatable {
+public enum AudioPlayerPlayingStatus: Hashable {
     case pending
     case nothingToPlay
     case paused
