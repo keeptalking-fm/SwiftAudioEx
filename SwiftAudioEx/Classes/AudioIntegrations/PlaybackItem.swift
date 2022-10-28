@@ -28,23 +28,31 @@ public struct PlaybackQueueSource {
 }
 
 public struct PlaybackItem {
-    public var metadata: PlaybackItem.Metadata
-    public var audioURL: URL
-    
+    public let metadata: PlaybackItem.Metadata
+    public let audioURL: URL
+
     public init(metadata: PlaybackItem.Metadata, audioURL: URL) {
         self.metadata = metadata
         self.audioURL = audioURL
     }
 
     public struct Metadata {
-        public var id: UUID
-        public var authorName: String
-        public var albumTitle: String
-        
-        public init(id: UUID, authorName: String, albumTitle: String) {
+        public let id: UUID
+        public let type: PlayableContentType
+        public let authorName: String
+        public let albumTitle: String
+
+        public init(id: UUID, type: PlayableContentType, authorName: String, albumTitle: String) {
             self.id = id
+            self.type = type
             self.authorName = authorName
             self.albumTitle = albumTitle
         }
     }
+}
+
+public enum PlayableContentType: Equatable {
+    case episode
+    case word
+    case recording
 }
